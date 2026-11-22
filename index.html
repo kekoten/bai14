@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+<title>Đấu Trường CSS – Bài 14 (Tin học 12 KNTT)</title>
+<style>
+  :root {
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --primary-light: #eff6ff;
+    --success: #16a34a;
+    --success-bg: #dcfce7;
+    --success-dark: #15803d;
+    --warn: #d97706;
+    --warn-bg: #fef3c7;
+    --warn-dark: #92400e;
+    --danger: #dc2626;
+    --text: #0f172a;
+    --muted: #64748b;
+    --border: #cbd5e1;
+    --code-bg: #0f172a;
+    --code-text: #f8fafc;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.45;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .screen {
+    display: none;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  .screen.active {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* START SCREEN */
+  #start-screen {
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    color: #fff;
+  }
+  .start-card {
+    background: #fff;
+    color: var(--text);
+    width: 100%;
+    max-width: 440px;
+    border-radius: 18px;
+    padding: 22px 18px;
+    box-shadow: 0 16px 36px rgba(0,0,0,0.25);
+  }
+  .badge {
+    display: inline-block;
+    background: #dbeafe;
+    color: var(--primary-dark);
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+    letter-spacing: 0.3px;
+  }
+  .start-card h1 {
+    margin: 0 0 6px;
+    font-size: 22px;
+    color: #0f172a;
+  }
+  .start-card p {
+    margin: 0 0 14px;
+    color: var(--muted);
+    font-size: 13.5px;
+  }
+  .info-list {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 11px 13px;
+    margin-bottom: 14px;
+    font-size: 13px;
+  }
+  .info-list div { margin: 5px 0; }
+  .input-group { margin-bottom: 14px; }
+  .input-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .input-group input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 16px; /* Chống iOS auto-zoom */
+    outline: none;
+    background: #fff;
+    color: var(--text);
+  }
+  .input-group input:focus { border-color: var(--primary); }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: transform 0.08s, opacity 0.15s, background-color 0.15s;
+    user-select: none;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: var(--primary);
+    color: #fff;
+    width: 100%;
+    padding: 13px;
+    font-size: 15.5px;
+  }
+  .btn-primary:active { background: var(--primary-dark); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-success:active { background: var(--success-dark); }
+  .btn-outline { background: #fff; color: var(--text); border: 1px solid var(--border); }
+  .btn-outline:active { background: #f1f5f9; }
+  .btn-warn { background: var(--warn-bg); color: var(--warn-dark); border: 1px solid #fcd34d; }
+  .btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+  /* TOPBAR */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: #0f172a;
+    color: #fff;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .level-pills {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .level-pills::-webkit-scrollbar { display: none; }
+  .pill {
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
+    background: #334155;
+    color: #cbd5e1;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    touch-action: manipulation;
+  }
+  .pill.active { background: var(--primary); color: #fff; }
+  .pill.done { background: var(--success); color: #fff; }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .timer {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    background: #1e293b;
+    padding: 5px 8px;
+    border-radius: 7px;
+    color: #93c5fd;
+    font-weight: 700;
+  }
+
+  /* WORKSPACE CONTAINER */
+  .container {
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 8px 8px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+
+  /* MISSION HEADER & CHECKLIST */
+  .mission-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .mission-title {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--primary-dark);
+    font-weight: 800;
+  }
+  .score-badge {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .score-badge.all-pass {
+    background: var(--success-bg);
+    color: var(--success-dark);
+    border-color: #86efac;
+  }
+  .mission-desc {
+    margin: 0 0 6px;
+    font-size: 12.5px;
+    color: #334155;
+    line-height: 1.4;
+  }
+  .checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12.5px;
+    padding: 5px 8px;
+    border-radius: 7px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    transition: all 0.15s;
+    line-height: 1.35;
+  }
+  .check-item.pass {
+    background: var(--success-bg);
+    border-color: #86efac;
+    color: #14532d;
+    font-weight: 600;
+  }
+  .check-icon {
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    flex-shrink: 0;
+    background: #e2e8f0;
+    color: #64748b;
+    font-weight: 800;
+  }
+  .check-item.pass .check-icon {
+    background: var(--success);
+    color: #fff;
+  }
+
+  /* HINT BOX */
+  .hint-box {
+    margin-top: 6px;
+    background: var(--warn-bg);
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--warn-dark);
+    display: none;
+    line-height: 1.4;
+  }
+  .hint-box.show { display: block; }
+  .hint-box code {
+    background: rgba(255,255,255,0.8);
+    padding: 1px 4px;
+    border-radius: 4px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-weight: 700;
+  }
+
+  /* PREVIEW TABS & IFRAME */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid #e2e8f0;
+    margin: -10px -12px 8px;
+    background: #f8fafc;
+    border-radius: 12px 12px 0 0;
+    overflow: hidden;
+  }
+  .tab-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 7px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    touch-action: manipulation;
+  }
+  .tab-btn.active {
+    color: var(--primary);
+    background: #fff;
+    border-bottom-color: var(--primary);
+  }
+  #preview-frame {
+    width: 100%;
+    height: 135px;
+    border: 1.5px solid #93c5fd;
+    border-radius: 8px;
+    background: #fff;
+    display: block;
+  }
+  #html-readonly {
+    display: none;
+    margin: 0;
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    min-height: 135px;
+    max-height: 180px;
+    line-height: 1.4;
+  }
+
+  /* EDITOR & QUICK-INSERT BAR */
+  .editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .editor-label {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .quick-bar {
+    display: flex;
+    gap: 5px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+  }
+  .quick-bar::-webkit-scrollbar { height: 4px; }
+  .quick-bar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  .qbtn {
+    flex-shrink: 0;
+    min-height: 36px;
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    padding: 6px 10px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .qbtn:active {
+    transform: scale(0.95);
+    background: #e2e8f0;
+  }
+  .qbtn.sym {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1e40af;
+  }
+  .qbtn.imp {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #991b1b;
+    font-weight: 800;
+  }
+
+  #css-editor {
+    width: 100%;
+    min-height: 135px;
+    background: var(--code-bg);
+    color: var(--code-text);
+    border: 2px solid #334155;
+    border-radius: 9px;
+    padding: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 16px; /* Bắt buộc 16px để ngăn iOS Safari auto-zoom khi chạm */
+    line-height: 1.45;
+    resize: vertical;
+    outline: none;
+    tab-size: 2;
+  }
+  #css-editor:focus { border-color: #60a5fa; }
+
+  .action-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  #status-text {
+    font-size: 12.5px;
+    color: var(--muted);
+    font-weight: 700;
+    flex: 1;
+    min-width: 180px;
+  }
+
+  /* FINISH SCREEN (High visibility green for teacher inspection) */
+  #finish-screen {
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+    background: linear-gradient(135deg, #15803d 0%, #22c55e 100%);
+    color: #fff;
+    text-align: center;
+    position: relative;
+    overflow-y: auto;
+  }
+  .finish-card {
+    background: #fff;
+    color: var(--text);
+    width: 100%;
+    max-width: 440px;
+    border-radius: 20px;
+    padding: 24px 18px;
+    box-shadow: 0 20px 45px rgba(0,0,0,0.25);
+    margin: auto;
+  }
+  .trophy { font-size: 50px; line-height: 1; margin-bottom: 8px; }
+  .finish-card h1 {
+    margin: 0 0 4px;
+    color: #15803d;
+    font-size: 22px;
+    font-weight: 800;
+  }
+  .student-badge {
+    display: inline-block;
+    background: #dcfce7;
+    color: #14532d;
+    font-weight: 800;
+    font-size: 17px;
+    padding: 6px 16px;
+    border-radius: 10px;
+    margin: 8px 0 12px;
+    border: 2px solid #86efac;
+    word-break: break-word;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .stat-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 8px;
+  }
+  .stat-val { font-size: 19px; font-weight: 800; color: var(--primary-dark); }
+  .stat-lbl { font-size: 11.5px; color: var(--muted); }
+
+  .cert-box {
+    background: #f8fafc;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 8px 10px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: #334155;
+    text-align: left;
+  }
+  .cert-row { display: flex; justify-content: space-between; margin: 3px 0; }
+  .cert-code { font-family: ui-monospace, Consolas, monospace; font-weight: 800; color: #1e3a8a; }
+
+  .note-teacher {
+    font-size: 12.5px;
+    color: #166534;
+    background: #f0fdf4;
+    padding: 9px;
+    border-radius: 9px;
+    margin-bottom: 14px;
+    border: 1px dashed #4ade80;
+    line-height: 1.35;
+  }
+
+  /* Confetti canvas */
+  #confetti-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 99;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="confetti-canvas"></canvas>
+
+<!-- MÀN HÌNH BẮT ĐẦU -->
+<section id="start-screen" class="screen active">
+  <div class="start-card">
+    <span class="badge">TIN HỌC 12 • BÀI 14 • MỤC 2C</span>
+    <h1>Đấu Trường CSS</h1>
+    <p>Thực hành định dạng văn bản, tính kế thừa, thứ tự ưu tiên, <strong>*</strong> và <strong>!important</strong> ngay trên điện thoại (chạy 100% offline).</p>
+    <div class="info-list">
+      <div><strong>Màn 1:</strong> Tân trang bài viết <em>Lịch sử CSS</em> (Ôn 1a–1c)</div>
+      <div><strong>Màn 2:</strong> Đảo ngược thứ tự ưu tiên (Ôn 2a–2b)</div>
+      <div><strong>Màn 3:</strong> Trùm cuối với <code>*</code> và <code>!important</code> (Mục 2c)</div>
+    </div>
+    <div class="input-group">
+      <label for="student-name">Họ và tên (hoặc STT + Tên):</label>
+      <input type="text" id="student-name" placeholder="Ví dụ: 12 - Nguyễn Văn A" autocomplete="off" autocapitalize="words" enterkeyhint="go">
+    </div>
+    <button class="btn btn-primary" onclick="startGame()">Bắt đầu thử thách →</button>
+    <div id="resume-hint" style="display:none; margin-top:10px; font-size:12px; text-align:center; color:var(--muted);">
+      <span>Đã khôi phục tiến trình làm bài trước đó. </span>
+      <a href="javascript:void(0)" onclick="clearAllData()" style="color:var(--danger); text-decoration:underline;">Bắt đầu lại từ đầu</a>
+    </div>
+  </div>
+</section>
+
+<!-- MÀN HÌNH LÀM BÀI -->
+<section id="game-screen" class="screen">
+  <header class="topbar">
+    <div class="level-pills" id="level-pills"></div>
+    <div class="topbar-right">
+      <div class="timer" id="timer-display">00:00</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Đề bài & Checklist -->
+    <div class="card">
+      <div class="mission-header">
+        <h2 class="mission-title" id="mission-title"></h2>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span class="score-badge" id="score-badge">0/0</span>
+          <button class="btn btn-warn btn-sm" id="hint-btn" onclick="showNextHint()">💡 Gợi ý</button>
+        </div>
+      </div>
+      <p class="mission-desc" id="mission-desc"></p>
+      <div class="checklist" id="checklist"></div>
+      <div class="hint-box" id="hint-box"></div>
+    </div>
+
+    <!-- Xem trước trực tiếp / Mã HTML -->
+    <div class="card">
+      <div class="tabs">
+        <button class="tab-btn active" id="tab-preview" onclick="switchTab('preview')">👁️ Kết quả hiển thị</button>
+        <button class="tab-btn" id="tab-html" onclick="switchTab('html')">📄 Mã HTML (Chỉ đọc)</button>
+      </div>
+      <iframe id="preview-frame" title="Xem trước CSS"></iframe>
+      <pre id="html-readonly"></pre>
+    </div>
+
+    <!-- Trình soạn thảo CSS -->
+    <div class="card">
+      <div class="editor-header">
+        <span class="editor-label">✏️ Nhập CSS trong &lt;style&gt;</span>
+        <div style="display:flex; gap:6px;">
+          <button class="btn btn-outline btn-sm" id="swap-btn" style="display:none;" onclick="swapH1Lines()">⇅ Đảo 2 dòng h1</button>
+          <button class="btn btn-outline btn-sm" onclick="resetCurrentLevel()">↺ Làm lại</button>
+        </div>
+      </div>
+
+      <!-- Thanh phím tắt chạm là điền -->
+      <div class="quick-bar" id="quick-bar"></div>
+
+      <textarea id="css-editor"
+        spellcheck="false"
+        autocapitalize="off"
+        autocomplete="off"
+        autocorrect="off"
+        placeholder="Nhập mã CSS tại đây..."></textarea>
+
+      <div class="action-row">
+        <span id="status-text">Đạt đủ tiêu chí để qua màn</span>
+        <button class="btn btn-success" id="next-btn" disabled onclick="goNextLevel()">Màn tiếp theo →</button>
+      </div>
+    </div>
+  </main>
+</section>
+
+<!-- MÀN HÌNH HOÀN THÀNH (XANH LÁ NỔI BẬT ĐỂ GIÁO VIÊN KIỂM TRA NHANH) -->
+<section id="finish-screen" class="screen">
+  <div class="finish-card">
+    <div class="trophy">🏆</div>
+    <h1>HOÀN THÀNH XUẤT SẮC!</h1>
+    <div class="student-badge" id="final-name">Học sinh</div>
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-val" id="final-score">3 / 3</div>
+        <div class="stat-lbl">Màn chơi vượt qua</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="final-time">00:00</div>
+        <div class="stat-lbl">Thời gian hoàn thành</div>
+      </div>
+    </div>
+
+    <!-- Mã xác minh điện tử chống chụp màn hình của bạn -->
+    <div class="cert-box">
+      <div class="cert-row">
+        <span>Mã chứng nhận:</span>
+        <span class="cert-code" id="final-cert-code">CSS14-0000</span>
+      </div>
+      <div class="cert-row">
+        <span>Thời điểm xác nhận:</span>
+        <span id="final-timestamp" style="font-weight:600;">--:--:--</span>
+      </div>
+      <div class="cert-row">
+        <span>Môn học:</span>
+        <span>Tin học 12 (KNTT) - Bài 14</span>
+      </div>
+    </div>
+
+    <div class="note-teacher">
+      <strong>Lưu ý:</strong> Giữ nguyên màn hình màu xanh này và giơ điện thoại lên (hoặc chờ giáo viên kiểm tra).
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="openSandbox()">🎨 Tự do sáng tạo</button>
+      <button class="btn btn-primary" style="flex:1; padding:10px; font-size:13.5px;" onclick="reviewLevels()">Xem lại bài</button>
+    </div>
+  </div>
+</section>
+
+<script>
+const STORAGE_KEY = "DAU_TRUONG_CSS_B14_STATE";
+
+const LEVELS = [
+  {
+    id: 1,
+    pill: "Màn 1",
+    title: "Màn 1: Tân trang 'Lịch sử CSS' (Ôn 1a – 1c)",
+    desc: "Viết CSS để định dạng đoạn văn bản giống Hình 14.1 SGK theo 4 tiêu chí bên dưới:",
+    html: `<h1>Lịch sử CSS</h1>\n<p>Ý tưởng của CSS do kĩ sư <em>Håkon Wium Lie</em>, người Na Uy, thiết lập năm 1994 trong khi làm việc với <em>Tim Berners-Lee</em> tại viện hạt nhân CERN.</p>`,
+    starterCss: `h1 {\n  \n}\np {\n  \n}\nem {\n  \n}`,
+    quickKeys: [
+      { label: "color:", insert: "color: ", cls: "" },
+      { label: "red;", insert: "red;", cls: "" },
+      { label: "purple;", insert: "purple;", cls: "" },
+      { label: "font-family:", insert: "font-family: ", cls: "" },
+      { label: "sans-serif;", insert: "sans-serif;", cls: "" },
+      { label: "text-indent:", insert: "text-indent: ", cls: "" },
+      { label: "2em;", insert: "2em;", cls: "" },
+      { label: "{ }", insert: "{\n  \n}", cls: "sym" },
+      { label: ":", insert: ": ", cls: "sym" },
+      { label: ";", insert: ";", cls: "sym" }
+    ],
+    hints: [
+      "Nấc 1: Dùng thuộc tính <code>color</code> cho màu chữ, <code>font-family</code> cho phông chữ (không chân là <code>sans-serif</code>), và <code>text-indent</code> để thụt lề đầu dòng.",
+      "Nấc 2: Gõ vào trong ngoặc nhọn: <code>h1 { color: red; font-family: sans-serif; }</code>, <code>p { text-indent: 2em; }</code>, <code>em { color: purple; }</code>."
+    ],
+    showSwap: false,
+    checks: [
+      {
+        label: "Tiêu đề h1 có chữ màu đỏ (red)",
+        test: (doc) => {
+          const el = doc.querySelector("h1");
+          return el && doc.defaultView.getComputedStyle(el).color === "rgb(255, 0, 0)";
+        }
+      },
+      {
+        label: "Tiêu đề h1 dùng phông không chân (sans-serif)",
+        test: (doc, css) => {
+          const el = doc.querySelector("h1");
+          if (!el) return false;
+          const h1Font = doc.defaultView.getComputedStyle(el).fontFamily.toLowerCase();
+          const refEl = doc.getElementById("__ref_sans");
+          const refFont = refEl ? doc.defaultView.getComputedStyle(refEl).fontFamily.toLowerCase() : "";
+          return h1Font === refFont || /font-family\s*:\s*[^;}]*sans-serif/i.test(stripComments(css));
+        }
+      },
+      {
+        label: "Đoạn văn p thụt lề dòng đầu tiên (text-indent > 0)",
+        test: (doc) => {
+          const el = doc.querySelector("p");
+          return el && parseFloat(doc.defaultView.getComputedStyle(el).textIndent) > 0;
+        }
+      },
+      {
+        label: "Tên tác giả trong thẻ em có chữ màu tím (purple)",
+        test: (doc) => {
+          const el = doc.querySelector("em");
+          return el && doc.defaultView.getComputedStyle(el).color === "rgb(128, 0, 128)";
+        }
+      }
+    ]
+  },
+  {
+    id: 2,
+    pill: "Màn 2",
+    title: "Màn 2: Đảo ngược thứ tự ưu tiên (Ôn 2a – 2b)",
+    desc: "Hiện tại h1 bị căn trái do quy tắc viết sau đè lên quy tắc viết trước. KHÔNG XÓA dòng căn trái, hãy làm cho h1 căn giữa (bạn có thể bấm nút 'Đảo 2 dòng h1' hoặc tự đổi thứ tự).",
+    html: `<h1>Tính kế thừa của CSS</h1>\n<h2>1. Mô hình cây HTML</h2>\n<p>Đây là đoạn đầu tiên...</p>`,
+    starterCss: `body { color: blue; }\nh1 { color: red; text-align: center; }\nh1 { text-align: left; }`,
+    quickKeys: [
+      { label: "text-align:", insert: "text-align: ", cls: "" },
+      { label: "center;", insert: "center;", cls: "" },
+      { label: "left;", insert: "left;", cls: "" },
+      { label: "color:", insert: "color: ", cls: "" },
+      { label: "blue;", insert: "blue;", cls: "" },
+      { label: "red;", insert: "red;", cls: "" },
+      { label: "{ }", insert: "{ }", cls: "sym" },
+      { label: ";", insert: ";", cls: "sym" }
+    ],
+    hints: [
+      "Nấc 1: Khi có nhiều mẫu định dạng cho cùng bộ chọn <code>h1</code>, trình duyệt sẽ áp dụng mẫu được viết <strong>cuối cùng</strong>.",
+      "Nấc 2: Đưa dòng <code>h1 { text-align: left; }</code> lên phía trên dòng <code>h1 { color: red; text-align: center; }</code> (hoặc bấm nút <strong>⇅ Đảo 2 dòng h1</strong>)."
+    ],
+    showSwap: true,
+    checks: [
+      {
+        label: "Thẻ h2 và p kế thừa màu xanh dương (blue) từ body",
+        test: (doc) => {
+          const h2 = doc.querySelector("h2");
+          const p = doc.querySelector("p");
+          if (!h2 || !p) return false;
+          const cs = doc.defaultView.getComputedStyle;
+          return cs(h2).color === "rgb(0, 0, 255)" && cs(p).color === "rgb(0, 0, 255)";
+        }
+      },
+      {
+        label: "Tiêu đề h1 vẫn giữ màu đỏ (red)",
+        test: (doc) => {
+          const el = doc.querySelector("h1");
+          return el && doc.defaultView.getComputedStyle(el).color === "rgb(255, 0, 0)";
+        }
+      },
+      {
+        label: "Tiêu đề h1 căn giữa (center) mà KHÔNG xóa dòng text-align: left",
+        test: (doc, css) => {
+          const el = doc.querySelector("h1");
+          if (!el) return false;
+          const clean = stripComments(css);
+          const hasLeft = /text-align\s*:\s*left/i.test(clean);
+          const isCenter = doc.defaultView.getComputedStyle(el).textAlign === "center";
+          return hasLeft && isCenter;
+        }
+      }
+    ]
+  },
+  {
+    id: 3,
+    pill: "Màn 3",
+    title: "Màn 3: Trùm cuối * và !important (Mục 2c)",
+    desc: "LUẬT CHƠI: Không được xóa hay đổi vị trí dòng h1 thứ hai! Hãy dùng từ khóa !important đúng chỗ để h1 căn giữa (như Hình 14.7 SGK), đồng thời giữ nguyên quy tắc * cho toàn trang.",
+    html: `<h1>Lịch sử CSS</h1>\n<p>Ý tưởng của CSS do kĩ sư Håkon Wium Lie, người Na Uy, thiết lập năm 1994 trong khi làm việc với Tim Berners-Lee tại viện hạt nhân CERN.</p>`,
+    starterCss: `h1 {\n  text-indent: 0em;\n  color: blue;\n  text-align: center;\n}\nh1 { text-align: left; color: red; }\n* { text-indent: 1em; color: blue; }`,
+    quickKeys: [
+      { label: "!important", insert: " !important", cls: "imp" },
+      { label: "*", insert: "* ", cls: "imp" },
+      { label: "text-align:", insert: "text-align: ", cls: "" },
+      { label: "center", insert: "center", cls: "" },
+      { label: "text-indent:", insert: "text-indent: ", cls: "" },
+      { label: "color:", insert: "color: ", cls: "" },
+      { label: "{ }", insert: "{ }", cls: "sym" },
+      { label: ";", insert: ";", cls: "sym" }
+    ],
+    hints: [
+      "Nấc 1: Từ khóa <code>!important</code> đặt ngay sau giá trị của thuộc tính cần ưu tiên cao nhất (trước dấu chấm phẩy <code>;</code>).",
+      "Nấc 2: Chỉ cần sửa dòng thứ 4 thành <code>text-align: center !important;</code>. Lưu ý: KHÔNG thêm !important vào <code>color: blue;</code> vì h1 vẫn cần màu đỏ từ dòng dưới!"
+    ],
+    showSwap: false,
+    checks: [
+      {
+        label: "h1 căn giữa nhờ !important (vẫn giữ dòng text-align: left ở dưới)",
+        test: (doc, css) => {
+          const el = doc.querySelector("h1");
+          if (!el) return false;
+          const clean = stripComments(css);
+          // Hỗ trợ mọi biến thể khoảng trắng hợp lệ theo W3C CSS
+          const hasImp = /text-align\s*:\s*center\s*!\s*important/i.test(clean);
+          const hasLeft = /text-align\s*:\s*left/i.test(clean);
+          const isCenter = doc.defaultView.getComputedStyle(el).textAlign === "center";
+          return hasImp && hasLeft && isCenter;
+        }
+      },
+      {
+        label: "h1 có chữ màu đỏ (red) và không bị thụt lề (0em)",
+        test: (doc) => {
+          const el = doc.querySelector("h1");
+          if (!el) return false;
+          const st = doc.defaultView.getComputedStyle(el);
+          return st.color === "rgb(255, 0, 0)" && parseFloat(st.textIndent) === 0;
+        }
+      },
+      {
+        label: "Đoạn văn p nhận màu xanh dương và thụt lề từ bộ chọn *",
+        test: (doc, css) => {
+          const el = doc.querySelector("p");
+          if (!el) return false;
+          const st = doc.defaultView.getComputedStyle(el);
+          const hasStar = /\*\s*\{[^}]*\}/.test(stripComments(css));
+          return hasStar && st.color === "rgb(0, 0, 255)" && parseFloat(st.textIndent) > 0;
+        }
+      }
+    ]
+  },
+  {
+    id: 4,
+    pill: "Tự do",
+    title: "Chế độ Tự do: Sáng tạo trang web của riêng em",
+    desc: "Em đã hoàn thành thử thách! Giờ hãy thử nghiệm thêm: font-size, font-weight, font-style: italic, line-height, text-decoration...",
+    html: `<h1>Lịch sử CSS</h1>\n<h2>Giới thiệu chung</h2>\n<p>Ý tưởng của CSS do kĩ sư <em>Håkon Wium Lie</em>, người Na Uy, thiết lập năm 1994 trong khi làm việc với <strong>Tim Berners-Lee</strong> tại viện hạt nhân CERN.</p>`,
+    starterCss: `body { font-family: sans-serif; }\nh1 { color: red; text-align: center; text-decoration: underline; }\np { line-height: 1.6; text-indent: 2em; text-align: justify; }\nem { color: purple; font-style: italic; }`,
+    quickKeys: [
+      { label: "font-size:", insert: "font-size: ", cls: "" },
+      { label: "font-weight:", insert: "font-weight: ", cls: "" },
+      { label: "font-style: italic;", insert: "font-style: italic;", cls: "" },
+      { label: "line-height:", insert: "line-height: ", cls: "" },
+      { label: "text-decoration:", insert: "text-decoration: ", cls: "" },
+      { label: "underline;", insert: "underline;", cls: "" },
+      { label: "line-through;", insert: "line-through;", cls: "" },
+      { label: "!important", insert: " !important", cls: "imp" },
+      { label: "{ }", insert: "{ }", cls: "sym" }
+    ],
+    hints: [
+      "Thử đổi <code>line-height: 2;</code> hoặc <code>text-indent: -1em;</code> để xem hiệu ứng thụt lề treo!",
+      "Lưu ý chuẩn cú pháp CSS: chữ nghiêng là <code>font-style: italic;</code> (không có chữ s) và căn lề là <code>text-align</code>."
+    ],
+    showSwap: false,
+    isSandbox: true,
+    checks: []
+  }
+];
+
+let currentIdx = 0;
+let savedCss = LEVELS.map(l => l.starterCss);
+let completed = [false, false, false, false];
+let hintStage = 0;
+let startTime = null;
+let timerInterval = null;
+let initialFinishedTimeStr = "";
+let certCode = "";
+let certTimestamp = "";
+
+function stripComments(css) {
+  return css.replace(/\/\*[\s\S]*?\*\//g, "");
+}
+
+function formatTime(sec) {
+  const m = String(Math.floor(sec / 60)).padStart(2, "0");
+  const s = String(sec % 60).padStart(2, "0");
+  return `${m}:${s}`;
+}
+
+function generateCertCode(name, timeStr) {
+  const cleanName = (name || "HOCSINH").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  let hash = 0;
+  const str = cleanName + timeStr + "B14KNTT";
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  const hex = Math.abs(hash).toString(16).toUpperCase().padStart(4, "0").slice(0, 4);
+  return `CSS14-${hex}`;
+}
+
+function getNowTimestamp() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} - ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+/* LOCAL STORAGE PERSISTENCE */
+function saveStateToStorage() {
+  try {
+    const name = document.getElementById("student-name").value.trim();
+    const data = {
+      name,
+      currentIdx,
+      savedCss,
+      completed,
+      startTime,
+      initialFinishedTimeStr,
+      certCode,
+      certTimestamp
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    // Ignore storage errors in restrictive iframe/private mode
+  }
+}
+
+function loadStateFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (data.name) document.getElementById("student-name").value = data.name;
+    if (Array.isArray(data.savedCss) && data.savedCss.length === LEVELS.length) {
+      savedCss = data.savedCss;
+    }
+    if (Array.isArray(data.completed) && data.completed.length === LEVELS.length) {
+      completed = data.completed;
+    }
+    if (data.initialFinishedTimeStr) initialFinishedTimeStr = data.initialFinishedTimeStr;
+    if (data.certCode) certCode = data.certCode;
+    if (data.certTimestamp) certTimestamp = data.certTimestamp;
+
+    if (data.name || completed.some(Boolean)) {
+      document.getElementById("resume-hint").style.display = "block";
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function clearAllData() {
+  if (confirm("Em có chắc chắn muốn xóa toàn bộ dữ liệu và làm lại từ đầu không?")) {
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    location.reload();
+  }
+}
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function startGame() {
+  const nameInput = document.getElementById("student-name").value.trim();
+  document.getElementById("final-name").textContent = nameInput || "Học sinh";
+
+  if (!startTime) startTime = Date.now();
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    document.getElementById("timer-display").textContent = formatTime(elapsed);
+  }, 1000);
+
+  saveStateToStorage();
+  showScreen("game-screen");
+
+  // Nếu đã làm dở dang ở màn nào thì tải màn đó, mặc định màn 0
+  const resumeIdx = (completed[0] && completed[1] && completed[2]) ? 0 : completed.findIndex(c => !c);
+  loadLevel(resumeIdx >= 0 ? resumeIdx : 0);
+}
+
+function renderPills() {
+  const wrap = document.getElementById("level-pills");
+  wrap.innerHTML = "";
+  const allMainDone = completed[0] && completed[1] && completed[2];
+
+  LEVELS.forEach((lv, idx) => {
+    // Ẩn tab Tự do cho tới khi hoàn thành cả 3 màn chính
+    if (lv.isSandbox && !allMainDone) return;
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pill" + (idx === currentIdx ? " active" : "") + (completed[idx] ? " done" : "");
+    btn.textContent = (completed[idx] && !lv.isSandbox ? "✓ " : "") + lv.pill;
+    btn.onclick = () => loadLevel(idx);
+    wrap.appendChild(btn);
+  });
+}
+
+function loadLevel(idx) {
+  currentIdx = idx;
+  const lv = LEVELS[idx];
+  hintStage = 0;
+
+  document.getElementById("mission-title").textContent = lv.title;
+  document.getElementById("mission-desc").textContent = lv.desc;
+  document.getElementById("html-readonly").textContent = `<body>\n${lv.html}\n</body>`;
+  document.getElementById("css-editor").value = savedCss[idx];
+  document.getElementById("swap-btn").style.display = lv.showSwap ? "inline-flex" : "none";
+
+  // Reset Hint
+  const hintBox = document.getElementById("hint-box");
+  hintBox.classList.remove("show");
+  hintBox.innerHTML = "";
+  document.getElementById("hint-btn").textContent = `💡 Gợi ý (0/${lv.hints.length})`;
+
+  // Render Quick-Insert Bar (Sử dụng onpointerdown + preventDefault để không làm mất focus và không kích hoạt bàn phím ảo nhảy liên tục)
+  const qbar = document.getElementById("quick-bar");
+  qbar.innerHTML = "";
+  lv.quickKeys.forEach(k => {
+    const b = document.createElement("button");
+    b.className = "qbtn " + (k.cls || "");
+    b.textContent = k.label;
+    b.type = "button";
+    b.onpointerdown = (e) => {
+      e.preventDefault();
+      insertAtCursor(k.insert);
+    };
+    qbar.appendChild(b);
+  });
+
+  // Next button label
+  const nextBtn = document.getElementById("next-btn");
+  if (lv.isSandbox) {
+    nextBtn.textContent = "🏆 Xem chứng nhận";
+    nextBtn.disabled = false;
+  } else if (idx === 2) {
+    nextBtn.textContent = "Hoàn thành 🏆";
+  } else {
+    nextBtn.textContent = "Màn tiếp theo →";
+  }
+
+  switchTab("preview");
+  renderPills();
+  updatePreviewAndCheck();
+}
+
+function switchTab(tab) {
+  const isPrev = tab === "preview";
+  document.getElementById("tab-preview").classList.toggle("active", isPrev);
+  document.getElementById("tab-html").classList.toggle("active", !isPrev);
+  document.getElementById("preview-frame").style.display = isPrev ? "block" : "none";
+  document.getElementById("html-readonly").style.display = isPrev ? "none" : "block";
+}
+
+/* CHÈN PHÍM TẮT VÀO VỊ TRÍ CON TRỎ THÔNG MINH */
+function insertAtCursor(text) {
+  const ta = document.getElementById("css-editor");
+  const start = ta.selectionStart != null ? ta.selectionStart : ta.value.length;
+  const end = ta.selectionEnd != null ? ta.selectionEnd : ta.value.length;
+  const val = ta.value;
+
+  let cursorOffset = text.length;
+  if (text === "{\n  \n}") {
+    cursorOffset = 4; // Đặt con trỏ vào giữa dấu ngoặc nhọn
+  } else if (text === "{ }") {
+    cursorOffset = 2;
+  }
+
+  ta.value = val.slice(0, start) + text + val.slice(end);
+  const newPos = start + cursorOffset;
+  ta.setSelectionRange(newPos, newPos);
+
+  savedCss[currentIdx] = ta.value;
+  saveStateToStorage();
+  updatePreviewAndCheck();
+}
+
+/* ĐẢO KHỐI RULE h1 THÔNG MINH (HỖ TRỢ CẢ 1 DÒNG LẪN NHIỀU DÒNG) */
+function swapH1Lines() {
+  const ta = document.getElementById("css-editor");
+  const css = ta.value;
+
+  // Khớp chính xác các khối rule h1 { ... }
+  const regex = /(h1\s*\{[^}]*\})/gi;
+  const matches = [...css.matchAll(regex)];
+
+  if (matches.length >= 2) {
+    const firstMatch = matches[0];
+    const secondMatch = matches[1];
+
+    const start1 = firstMatch.index;
+    const end1 = start1 + firstMatch[0].length;
+    const start2 = secondMatch.index;
+    const end2 = start2 + secondMatch[0].length;
+
+    const partBefore = css.slice(0, start1);
+    const middlePart = css.slice(end1, start2);
+    const partAfter = css.slice(end2);
+
+    ta.value = partBefore + secondMatch[0] + middlePart + firstMatch[0] + partAfter;
+    savedCss[currentIdx] = ta.value;
+    saveStateToStorage();
+    updatePreviewAndCheck();
+  }
+}
+
+function resetCurrentLevel() {
+  if (confirm("Em có muốn đặt lại mã CSS ban đầu của màn này không?")) {
+    savedCss[currentIdx] = LEVELS[currentIdx].starterCss;
+    document.getElementById("css-editor").value = savedCss[currentIdx];
+    saveStateToStorage();
+    updatePreviewAndCheck();
+  }
+}
+
+function showNextHint() {
+  const lv = LEVELS[currentIdx];
+  if (hintStage < lv.hints.length) hintStage++;
+  const hintBox = document.getElementById("hint-box");
+  hintBox.innerHTML = lv.hints.slice(0, hintStage).map(h => `<div style="margin:3px 0;">${h}</div>`).join("");
+  hintBox.classList.add("show");
+  document.getElementById("hint-btn").textContent = `💡 Gợi ý (${hintStage}/${lv.hints.length})`;
+}
+
+function updatePreviewAndCheck() {
+  const lv = LEVELS[currentIdx];
+  const css = document.getElementById("css-editor").value;
+  savedCss[currentIdx] = css;
+
+  const frame = document.getElementById("preview-frame");
+  const docHtml = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<style>
+  body {
+    margin: 10px;
+    font-family: system-ui, -apple-system, sans-serif;
+    line-height: 1.45;
+    font-size: 14px;
+    color: #1e293b;
+  }
+  h1 { margin: 0 0 8px; font-size: 18px; }
+  h2 { margin: 0 0 6px; font-size: 16px; }
+  p { margin: 0 0 8px; }
+  ${css}
+</style>
+</head>
+<body>
+  ${lv.html}
+  <span id="__ref_sans" style="display:none; font-family: sans-serif !important;">ref</span>
+</body>
+</html>`;
+
+  frame.onload = () => {
+    try {
+      runChecks(frame.contentDocument, css);
+    } catch (e) {
+      // Bảo vệ chống lỗi iframe sandbox
+    }
+  };
+  frame.srcdoc = docHtml;
+}
+
+function runChecks(doc, css) {
+  const lv = LEVELS[currentIdx];
+  const listEl = document.getElementById("checklist");
+  const nextBtn = document.getElementById("next-btn");
+  const statusText = document.getElementById("status-text");
+  const scoreBadge = document.getElementById("score-badge");
+
+  if (lv.isSandbox) {
+    listEl.innerHTML = `<div class="check-item pass"><span class="check-icon">★</span><span>Chế độ tự do: Mọi thay đổi hiển thị ngay ở khung bên dưới!</span></div>`;
+    scoreBadge.textContent = "Tự do";
+    scoreBadge.className = "score-badge all-pass";
+    statusText.textContent = "🎨 Đang ở chế độ sáng tạo tự do";
+    statusText.style.color = "var(--primary-dark)";
+    nextBtn.disabled = false;
+    return;
+  }
+
+  let passCount = 0;
+  listEl.innerHTML = "";
+  lv.checks.forEach(c => {
+    let ok = false;
+    try { ok = !!c.test(doc, css); } catch (e) { ok = false; }
+    if (ok) passCount++;
+    const item = document.createElement("div");
+    item.className = "check-item" + (ok ? " pass" : "");
+    item.innerHTML = `<span class="check-icon">${ok ? "✓" : "•"}</span><span>${c.label}</span>`;
+    listEl.appendChild(item);
+  });
+
+  const allPass = passCount === lv.checks.length;
+  scoreBadge.textContent = `${passCount}/${lv.checks.length}`;
+  scoreBadge.className = "score-badge" + (allPass ? " all-pass" : "");
+
+  if (allPass && !completed[currentIdx]) {
+    completed[currentIdx] = true;
+    saveStateToStorage();
+    renderPills();
+  }
+  nextBtn.disabled = !allPass;
+
+  if (allPass) {
+    statusText.textContent = "🎉 Tuyệt vời! Em đã đạt mọi tiêu chí.";
+    statusText.style.color = "var(--success)";
+  } else {
+    statusText.textContent = `Đã đạt ${passCount}/${lv.checks.length} tiêu chí`;
+    statusText.style.color = "var(--muted)";
+  }
+}
+
+function goNextLevel() {
+  if (LEVELS[currentIdx].isSandbox) {
+    showFinishScreen();
+    return;
+  }
+  if (currentIdx < 2) {
+    loadLevel(currentIdx + 1);
+  } else {
+    // Hoàn thành cả 3 màn chính
+    showFinishScreen();
+  }
+}
+
+function showFinishScreen() {
+  if (timerInterval) clearInterval(timerInterval);
+
+  // Bảo lưu thời gian hoàn thành lần đầu tiên
+  if (!initialFinishedTimeStr) {
+    const elapsed = Math.floor((Date.now() - (startTime || Date.now())) / 1000);
+    initialFinishedTimeStr = formatTime(elapsed);
+  }
+
+  const nameInput = document.getElementById("student-name").value.trim();
+  const displayName = nameInput || "Học sinh";
+  document.getElementById("final-name").textContent = displayName;
+  document.getElementById("final-time").textContent = initialFinishedTimeStr;
+
+  const doneMain = [0, 1, 2].filter(i => completed[i]).length;
+  document.getElementById("final-score").textContent = `${doneMain} / 3`;
+
+  // Tạo và hiển thị mã xác nhận chống gian lận
+  if (!certCode) {
+    certCode = generateCertCode(displayName, initialFinishedTimeStr);
+    certTimestamp = getNowTimestamp();
+  }
+  document.getElementById("final-cert-code").textContent = certCode;
+  document.getElementById("final-timestamp").textContent = certTimestamp;
+
+  saveStateToStorage();
+  showScreen("finish-screen");
+  launchConfetti();
+}
+
+function openSandbox() {
+  showScreen("game-screen");
+  loadLevel(3);
+}
+
+function reviewLevels() {
+  showScreen("game-screen");
+  loadLevel(0);
+}
+
+/* HIỆU ỨNG PHÁO HOA CHÚC MỪNG THUẦN JS (ZERO DEPENDENCY) */
+function launchConfetti() {
+  const canvas = document.getElementById("confetti-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const colors = ["#22c55e", "#3b82f6", "#eab308", "#ec4899", "#a855f7", "#ef4444"];
+  const pieces = [];
+  for (let i = 0; i < 70; i++) {
+    pieces.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height - canvas.height,
+      size: Math.random() * 8 + 5,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      speedY: Math.random() * 3 + 2,
+      speedX: Math.random() * 2 - 1,
+      rotation: Math.random() * 360,
+      rotSpeed: Math.random() * 4 - 2
+    });
+  }
+
+  let animFrame;
+  let frameCount = 0;
+  function update() {
+    frameCount++;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pieces.forEach(p => {
+      p.y += p.speedY;
+      p.x += p.speedX;
+      p.rotation += p.rotSpeed;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate((p.rotation * Math.PI) / 180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+      ctx.restore();
+    });
+
+    if (frameCount < 160) {
+      animFrame = requestAnimationFrame(update);
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      cancelAnimationFrame(animFrame);
+    }
+  }
+  update();
+}
+
+/* LẮNG NGHE SỰ KIỆN GÕ PHÍM */
+document.getElementById("css-editor").addEventListener("input", () => {
+  saveStateToStorage();
+  updatePreviewAndCheck();
+});
+
+document.getElementById("student-name").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") startGame();
+});
+
+// Khôi phục trạng thái khi tải trang
+window.addEventListener("DOMContentLoaded", () => {
+  loadStateFromStorage();
+});
+</script>
+</body>
+</html>
