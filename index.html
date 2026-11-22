@@ -170,7 +170,7 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    touch-action: pan-x;
+    touch-action: manipulation;
   }
   .level-pills::-webkit-scrollbar { display: none; }
   .pill {
@@ -183,7 +183,7 @@
     border: none;
     cursor: pointer;
     white-space: nowrap;
-    touch-action: pan-x;
+    touch-action: manipulation;
   }
   .pill.active { background: var(--primary); color: #fff; }
   .pill.done { background: var(--success); color: #fff; }
@@ -384,22 +384,51 @@
     color: var(--text);
   }
 
-  /* Thanh phím tắt hỗ trợ vuốt mượt mà, chống ấn nhầm */
+  /* THANH PHÍM TẮT CÓ NÚT ĐIỀU HƯỚNG VÀ CHỐNG GHOST-CLICK KHI VUỐT */
+  .quick-bar-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 6px;
+    width: 100%;
+  }
+  .qbar-arrow {
+    flex-shrink: 0;
+    width: 32px;
+    height: 38px;
+    background: #e2e8f0;
+    color: #1e293b;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    font-size: 17px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: background 0.1s;
+  }
+  .qbar-arrow:active {
+    background: #cbd5e1;
+  }
   .quick-bar {
+    flex: 1;
     display: flex;
     gap: 6px;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 4px 2px 7px;
-    margin-bottom: 6px;
+    padding: 4px 2px;
     -webkit-overflow-scrolling: touch;
-    touch-action: pan-x;
-    scrollbar-width: thin;
+    touch-action: manipulation;
+    scrollbar-width: none;
     user-select: none;
     -webkit-user-select: none;
   }
-  .quick-bar::-webkit-scrollbar { height: 4px; }
-  .quick-bar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  .quick-bar::-webkit-scrollbar { display: none; }
   
   .qbtn {
     flex-shrink: 0;
@@ -413,7 +442,8 @@
     font-size: 13.5px;
     font-weight: 700;
     cursor: pointer;
-    touch-action: pan-x;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
     user-select: none;
     -webkit-user-select: none;
     transition: transform 0.08s, background-color 0.12s;
@@ -625,12 +655,17 @@
         <span class="editor-label">✏️ Nhập CSS trong &lt;style&gt; (Hiển thị trực tiếp ở trên)</span>
         <div style="display:flex; gap:6px;">
           <button class="btn btn-outline btn-sm" id="swap-btn" style="display:none;" onclick="swapH1Lines()">⇅ Đảo 2 dòng h1</button>
+          <button class="btn btn-outline btn-sm" id="undo-btn" onclick="undoEditor()" title="Hoàn tác thao tác vừa nhập">↩ Hoàn tác</button>
           <button class="btn btn-outline btn-sm" onclick="resetCurrentLevel()">↺ Làm lại</button>
         </div>
       </div>
 
-      <!-- Thanh phím tắt chạm là điền (Chống ấn nhầm khi vuốt) -->
-      <div class="quick-bar" id="quick-bar"></div>
+      <!-- Thanh phím tắt có nút mũi tên hỗ trợ và chống ấn nhầm 100% -->
+      <div class="quick-bar-wrapper">
+        <button type="button" class="qbar-arrow" onclick="scrollQuickBar(-140)" aria-label="Xem phím trước">‹</button>
+        <div class="quick-bar" id="quick-bar"></div>
+        <button type="button" class="qbar-arrow" onclick="scrollQuickBar(140)" aria-label="Xem phím sau">›</button>
+      </div>
 
       <textarea id="css-editor"
         spellcheck="false"
@@ -1072,53 +1107,16 @@ function loadLevel(idx) {
   hintBox.innerHTML = "";
   document.getElementById("hint-btn").textContent = `💡 Gợi ý (0/${lv.hints.length})`;
 
-  // Render Quick-Insert Bar
+  // Render Quick-Insert Bar (gắn data-insert, sự kiện click xử lý tập trung chống ghost-click)
   const qbar = document.getElementById("quick-bar");
   qbar.innerHTML = "";
-
-  let isBarScrolling = false;
-  let scrollDebounce = null;
-  qbar.onscroll = () => {
-    isBarScrolling = true;
-    clearTimeout(scrollDebounce);
-    scrollDebounce = setTimeout(() => {
-      isBarScrolling = false;
-    }, 120);
-  };
 
   lv.quickKeys.forEach(k => {
     const b = document.createElement("button");
     b.className = "qbtn " + (k.cls || "");
     b.textContent = k.label;
     b.type = "button";
-
-    let startX = 0;
-    let startY = 0;
-    let isSwiping = false;
-
-    b.addEventListener("pointerdown", (e) => {
-      startX = e.clientX;
-      startY = e.clientY;
-      isSwiping = false;
-    }, { passive: true });
-
-    b.addEventListener("pointermove", (e) => {
-      const dx = Math.abs(e.clientX - startX);
-      const dy = Math.abs(e.clientY - startY);
-      if (dx > 6 || dy > 6) {
-        isSwiping = true;
-      }
-    }, { passive: true });
-
-    b.addEventListener("click", (e) => {
-      if (isSwiping || isBarScrolling) {
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
-      insertAtCursor(k.insert);
-    });
-
+    b.setAttribute("data-insert", k.insert);
     qbar.appendChild(b);
   });
 
@@ -1146,10 +1144,42 @@ function switchTab(tab) {
   document.getElementById("html-readonly").style.display = isPrev ? "none" : "block";
 }
 
+/* HÀM CUỘN THANH PHÍM TẮT BẰNG MŨI TÊN (CỰC KỲ TIỆN CHO MOBILE) */
+function scrollQuickBar(offset) {
+  const qbar = document.getElementById("quick-bar");
+  if (qbar) {
+    qbar.scrollBy({ left: offset, behavior: "smooth" });
+  }
+}
+
+
+/* HỆ THỐNG HOÀN TÁC (UNDO) CHO TRÌNH SOẠN THẢO TRÊN ĐIỆN THOẠI */
+let undoStack = [];
+
+function pushUndo(code) {
+  if (code == null) return;
+  if (undoStack.length === 0 || undoStack[undoStack.length - 1] !== code) {
+    undoStack.push(code);
+    if (undoStack.length > 25) undoStack.shift();
+  }
+}
+
+function undoEditor() {
+  const ta = document.getElementById("css-editor");
+  if (undoStack.length > 0) {
+    const prev = undoStack.pop();
+    ta.value = prev;
+    savedCss[currentIdx] = prev;
+    saveStateToStorage();
+    updatePreviewAndCheck(false);
+  }
+}
+
 /* CHÈN PHÍM TẮT VÀO VỊ TRÍ CON TRỎ THÔNG MINH */
 function insertAtCursor(text) {
   const ta = document.getElementById("css-editor");
   const val = ta.value;
+  pushUndo(val);
 
   let start = ta.selectionStart;
   let end = ta.selectionEnd;
@@ -1193,6 +1223,7 @@ function insertAtCursor(text) {
 function swapH1Lines() {
   const ta = document.getElementById("css-editor");
   const css = ta.value;
+  pushUndo(css);
 
   const regex = /(h1\s*\{[^}]*\})/gi;
   const matches = [...css.matchAll(regex)];
@@ -1218,6 +1249,8 @@ function swapH1Lines() {
 }
 
 function resetCurrentLevel() {
+  const curVal = document.getElementById("css-editor").value;
+  pushUndo(curVal);
   if (confirm("Em có muốn đặt lại mã CSS ban đầu của màn này không?")) {
     savedCss[currentIdx] = LEVELS[currentIdx].starterCss;
     document.getElementById("css-editor").value = savedCss[currentIdx];
@@ -1461,6 +1494,24 @@ function updateSelectionRecord() {
   }
 }
 
+
+// Lưu lại trạng thái trước khi học sinh gõ tay để có thể Hoàn tác
+let typingTimer = null;
+let typingInitialVal = null;
+editorEl.addEventListener("keydown", (e) => {
+  if (!typingTimer) {
+    typingInitialVal = editorEl.value;
+  }
+  clearTimeout(typingTimer);
+  typingTimer = setTimeout(() => {
+    if (typingInitialVal != null) {
+      pushUndo(typingInitialVal);
+      typingInitialVal = null;
+    }
+    typingTimer = null;
+  }, 700);
+});
+
 editorEl.addEventListener("input", () => {
   updateSelectionRecord();
   saveStateToStorage();
@@ -1470,6 +1521,90 @@ editorEl.addEventListener("keyup", updateSelectionRecord);
 editorEl.addEventListener("click", updateSelectionRecord);
 editorEl.addEventListener("touchend", updateSelectionRecord);
 editorEl.addEventListener("select", updateSelectionRecord);
+
+/* BỘ PHÂN GIẢI THAO TÁC VUỐT VÀ CHẶN HOÀN TOÀN GHOST-CLICK TRÊN QUICK-BAR */
+let isBarTouching = false;
+let barTouchStartX = 0;
+let barTouchStartY = 0;
+let barTouchStartTime = 0;
+let barStartScrollLeft = 0;
+let barHasMoved = false;
+let suppressQuickClickUntil = 0;
+
+const qbarEl = document.getElementById("quick-bar");
+
+qbarEl.addEventListener("touchstart", (e) => {
+  if (e.touches && e.touches.length > 0) {
+    isBarTouching = true;
+    barTouchStartX = e.touches[0].clientX;
+    barTouchStartY = e.touches[0].clientY;
+    barTouchStartTime = Date.now();
+    barStartScrollLeft = qbarEl.scrollLeft;
+    barHasMoved = false;
+  }
+}, { passive: true });
+
+qbarEl.addEventListener("touchmove", (e) => {
+  if (!isBarTouching) return;
+  if (e.touches && e.touches.length > 0) {
+    const dx = e.touches[0].clientX - barTouchStartX;
+    const dy = e.touches[0].clientY - barTouchStartY;
+    // Bất kỳ dịch chuyển nào > 5px (dù theo trục ngang hay trục dọc) đều xác nhận là vuốt / cuộn
+    if (Math.hypot(dx, dy) > 5) {
+      barHasMoved = true;
+      suppressQuickClickUntil = Date.now() + 600;
+    }
+  }
+}, { passive: true });
+
+qbarEl.addEventListener("touchend", () => {
+  const duration = Date.now() - barTouchStartTime;
+  const scrollDiff = Math.abs(qbarEl.scrollLeft - barStartScrollLeft);
+  // Nếu ngón tay đã dịch chuyển, hoặc vị trí cuộn thay đổi, hoặc giữ ngón tay quá 350ms (ngập ngừng / đè ngón tay)
+  if (barHasMoved || scrollDiff > 2 || duration > 350) {
+    barHasMoved = true;
+    suppressQuickClickUntil = Date.now() + 600;
+  }
+  isBarTouching = false;
+}, { passive: true });
+
+qbarEl.addEventListener("touchcancel", () => {
+  barHasMoved = true;
+  suppressQuickClickUntil = Date.now() + 600;
+  isBarTouching = false;
+}, { passive: true });
+
+qbarEl.addEventListener("scroll", () => {
+  barHasMoved = true;
+  suppressQuickClickUntil = Date.now() + 600;
+}, { passive: true });
+
+// Khi học sinh cuộn dọc trang qua khu vực quick-bar
+window.addEventListener("scroll", () => {
+  suppressQuickClickUntil = Date.now() + 600;
+}, { passive: true });
+
+// Chuột máy tính (click bình thường không bị cản)
+qbarEl.addEventListener("mousedown", () => {
+  barHasMoved = false;
+});
+
+// Xử lý click tập trung: Ngăn chặn triệt để ghost-click do vuốt gây ra
+qbarEl.addEventListener("click", (e) => {
+  if (Date.now() < suppressQuickClickUntil || barHasMoved) {
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+
+  const btn = e.target.closest(".qbtn");
+  if (!btn) return;
+
+  const insertText = btn.getAttribute("data-insert");
+  if (insertText) {
+    insertAtCursor(insertText);
+  }
+});
 
 document.getElementById("student-name").addEventListener("keydown", (e) => {
   if (e.key === "Enter") startGame();
