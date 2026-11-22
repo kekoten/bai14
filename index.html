@@ -170,6 +170,7 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    touch-action: pan-x;
   }
   .level-pills::-webkit-scrollbar { display: none; }
   .pill {
@@ -182,7 +183,7 @@
     border: none;
     cursor: pointer;
     white-space: nowrap;
-    touch-action: manipulation;
+    touch-action: pan-x;
   }
   .pill.active { background: var(--primary); color: #fff; }
   .pill.done { background: var(--success); color: #fff; }
@@ -346,7 +347,7 @@
   }
   #preview-frame {
     width: 100%;
-    height: 135px;
+    height: 145px;
     border: 1.5px solid #93c5fd;
     border-radius: 8px;
     background: #fff;
@@ -363,8 +364,8 @@
     font-size: 12px;
     overflow-x: auto;
     white-space: pre-wrap;
-    min-height: 135px;
-    max-height: 180px;
+    min-height: 145px;
+    max-height: 190px;
     line-height: 1.4;
   }
 
@@ -382,32 +383,40 @@
     font-weight: 700;
     color: var(--text);
   }
+
+  /* Thanh phím tắt hỗ trợ vuốt mượt mà, chống ấn nhầm */
   .quick-bar {
     display: flex;
-    gap: 5px;
+    gap: 6px;
     overflow-x: auto;
-    padding-bottom: 6px;
+    overflow-y: hidden;
+    padding: 4px 2px 7px;
     margin-bottom: 6px;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x;
+    scrollbar-width: thin;
+    user-select: none;
+    -webkit-user-select: none;
   }
   .quick-bar::-webkit-scrollbar { height: 4px; }
   .quick-bar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  
   .qbtn {
     flex-shrink: 0;
-    min-height: 36px;
+    min-height: 38px;
     background: #f1f5f9;
     color: #0f172a;
-    border: 1px solid #cbd5e1;
-    border-radius: 7px;
-    padding: 6px 10px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 6px 12px;
     font-family: ui-monospace, Consolas, monospace;
     font-size: 13.5px;
     font-weight: 700;
     cursor: pointer;
-    touch-action: manipulation;
+    touch-action: pan-x;
     user-select: none;
     -webkit-user-select: none;
+    transition: transform 0.08s, background-color 0.12s;
   }
   .qbtn:active {
     transform: scale(0.95);
@@ -603,7 +612,7 @@
     <!-- Xem trước trực tiếp / Mã HTML -->
     <div class="card">
       <div class="tabs">
-        <button class="tab-btn active" id="tab-preview" onclick="switchTab('preview')">👁️ Kết quả hiển thị</button>
+        <button class="tab-btn active" id="tab-preview" onclick="switchTab('preview')">👁️ Kết quả hiển thị (Live Preview)</button>
         <button class="tab-btn" id="tab-html" onclick="switchTab('html')">📄 Mã HTML (Chỉ đọc)</button>
       </div>
       <iframe id="preview-frame" title="Xem trước CSS"></iframe>
@@ -613,14 +622,14 @@
     <!-- Trình soạn thảo CSS -->
     <div class="card">
       <div class="editor-header">
-        <span class="editor-label">✏️ Nhập CSS trong &lt;style&gt;</span>
+        <span class="editor-label">✏️ Nhập CSS trong &lt;style&gt; (Hiển thị trực tiếp ở trên)</span>
         <div style="display:flex; gap:6px;">
           <button class="btn btn-outline btn-sm" id="swap-btn" style="display:none;" onclick="swapH1Lines()">⇅ Đảo 2 dòng h1</button>
           <button class="btn btn-outline btn-sm" onclick="resetCurrentLevel()">↺ Làm lại</button>
         </div>
       </div>
 
-      <!-- Thanh phím tắt chạm là điền -->
+      <!-- Thanh phím tắt chạm là điền (Chống ấn nhầm khi vuốt) -->
       <div class="quick-bar" id="quick-bar"></div>
 
       <textarea id="css-editor"
@@ -684,6 +693,23 @@
 <script>
 const STORAGE_KEY = "DAU_TRUONG_CSS_B14_STATE";
 
+function stripComments(css) {
+  return css.replace(/\/\*[\s\S]*?\*\//g, "");
+}
+
+// Trích xuất phần thân { ... } của đúng selector cần kiểm tra (tránh đặt sai chỗ mà vẫn pass)
+function getRuleBody(css, selector) {
+  const clean = stripComments(css);
+  const escaped = selector === "*" ? "\\*" : selector;
+  const regex = new RegExp("(?:^|[\\s},])" + escaped + "\\s*\\{([^}]*)\\}", "gi");
+  let bodies = [];
+  let match;
+  while ((match = regex.exec(clean)) !== null) {
+    bodies.push(match[1]);
+  }
+  return bodies.join(" ");
+}
+
 const LEVELS = [
   {
     id: 1,
@@ -712,9 +738,13 @@ const LEVELS = [
     checks: [
       {
         label: "Tiêu đề h1 có chữ màu đỏ (red)",
-        test: (doc) => {
+        test: (doc, css) => {
           const el = doc.querySelector("h1");
-          return el && doc.defaultView.getComputedStyle(el).color === "rgb(255, 0, 0)";
+          if (!el) return false;
+          const h1Body = getRuleBody(css, "h1");
+          const hasRedInH1 = /color\s*:\s*(red|#f00|#ff0000|rgb\(\s*255\s*,\s*0\s*,\s*0\s*\))/i.test(h1Body);
+          const isRed = doc.defaultView.getComputedStyle(el).color === "rgb(255, 0, 0)";
+          return hasRedInH1 && isRed;
         }
       },
       {
@@ -722,24 +752,36 @@ const LEVELS = [
         test: (doc, css) => {
           const el = doc.querySelector("h1");
           if (!el) return false;
+          const h1Body = getRuleBody(css, "h1");
+          const hasSansInH1 = /font-family\s*:\s*[^;}]*sans-serif/i.test(h1Body);
+          if (!hasSansInH1) return false;
+
           const h1Font = doc.defaultView.getComputedStyle(el).fontFamily.toLowerCase();
           const refEl = doc.getElementById("__ref_sans");
           const refFont = refEl ? doc.defaultView.getComputedStyle(refEl).fontFamily.toLowerCase() : "";
-          return h1Font === refFont || /font-family\s*:\s*[^;}]*sans-serif/i.test(stripComments(css));
+          return hasSansInH1 && (h1Font === refFont || h1Font.includes("sans-serif"));
         }
       },
       {
         label: "Đoạn văn p thụt lề dòng đầu tiên (text-indent > 0)",
-        test: (doc) => {
+        test: (doc, css) => {
           const el = doc.querySelector("p");
-          return el && parseFloat(doc.defaultView.getComputedStyle(el).textIndent) > 0;
+          if (!el) return false;
+          const pBody = getRuleBody(css, "p");
+          const hasIndentInP = /text-indent\s*:\s*[^;}]/i.test(pBody);
+          const isIndented = parseFloat(doc.defaultView.getComputedStyle(el).textIndent) > 0;
+          return hasIndentInP && isIndented;
         }
       },
       {
         label: "Tên tác giả trong thẻ em có chữ màu tím (purple)",
-        test: (doc) => {
+        test: (doc, css) => {
           const el = doc.querySelector("em");
-          return el && doc.defaultView.getComputedStyle(el).color === "rgb(128, 0, 128)";
+          if (!el) return false;
+          const emBody = getRuleBody(css, "em");
+          const hasPurpleInEm = /color\s*:\s*(purple|#800080|rgb\(\s*128\s*,\s*0\s*,\s*128\s*\))/i.test(emBody);
+          const isPurple = doc.defaultView.getComputedStyle(el).color === "rgb(128, 0, 128)";
+          return hasPurpleInEm && isPurple;
         }
       }
     ]
@@ -769,12 +811,14 @@ const LEVELS = [
     checks: [
       {
         label: "Thẻ h2 và p kế thừa màu xanh dương (blue) từ body",
-        test: (doc) => {
+        test: (doc, css) => {
           const h2 = doc.querySelector("h2");
           const p = doc.querySelector("p");
           if (!h2 || !p) return false;
+          const bodyRule = getRuleBody(css, "body");
+          const hasBlueInBody = /color\s*:\s*(blue|#00f|#0000ff|rgb\(\s*0\s*,\s*0\s*,\s*255\s*\))/i.test(bodyRule);
           const cs = doc.defaultView.getComputedStyle;
-          return cs(h2).color === "rgb(0, 0, 255)" && cs(p).color === "rgb(0, 0, 255)";
+          return hasBlueInBody && cs(h2).color === "rgb(0, 0, 255)" && cs(p).color === "rgb(0, 0, 255)";
         }
       },
       {
@@ -826,7 +870,6 @@ const LEVELS = [
           const el = doc.querySelector("h1");
           if (!el) return false;
           const clean = stripComments(css);
-          // Hỗ trợ mọi biến thể khoảng trắng hợp lệ theo W3C CSS
           const hasImp = /text-align\s*:\s*center\s*!\s*important/i.test(clean);
           const hasLeft = /text-align\s*:\s*left/i.test(clean);
           const isCenter = doc.defaultView.getComputedStyle(el).textAlign === "center";
@@ -848,7 +891,8 @@ const LEVELS = [
           const el = doc.querySelector("p");
           if (!el) return false;
           const st = doc.defaultView.getComputedStyle(el);
-          const hasStar = /\*\s*\{[^}]*\}/.test(stripComments(css));
+          const starBody = getRuleBody(css, "*");
+          const hasStar = starBody.length > 0;
           return hasStar && st.color === "rgb(0, 0, 255)" && parseFloat(st.textIndent) > 0;
         }
       }
@@ -892,9 +936,9 @@ let initialFinishedTimeStr = "";
 let certCode = "";
 let certTimestamp = "";
 
-function stripComments(css) {
-  return css.replace(/\/\*[\s\S]*?\*\//g, "");
-}
+// Ghi nhớ vị trí con trỏ chính xác trong editor
+let lastSelectionStart = null;
+let lastSelectionEnd = null;
 
 function formatTime(sec) {
   const m = String(Math.floor(sec / 60)).padStart(2, "0");
@@ -934,9 +978,7 @@ function saveStateToStorage() {
       certTimestamp
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch (e) {
-    // Ignore storage errors in restrictive iframe/private mode
-  }
+  } catch (e) {}
 }
 
 function loadStateFromStorage() {
@@ -990,7 +1032,6 @@ function startGame() {
   saveStateToStorage();
   showScreen("game-screen");
 
-  // Nếu đã làm dở dang ở màn nào thì tải màn đó, mặc định màn 0
   const resumeIdx = (completed[0] && completed[1] && completed[2]) ? 0 : completed.findIndex(c => !c);
   loadLevel(resumeIdx >= 0 ? resumeIdx : 0);
 }
@@ -1001,7 +1042,6 @@ function renderPills() {
   const allMainDone = completed[0] && completed[1] && completed[2];
 
   LEVELS.forEach((lv, idx) => {
-    // Ẩn tab Tự do cho tới khi hoàn thành cả 3 màn chính
     if (lv.isSandbox && !allMainDone) return;
 
     const btn = document.createElement("button");
@@ -1017,6 +1057,8 @@ function loadLevel(idx) {
   currentIdx = idx;
   const lv = LEVELS[idx];
   hintStage = 0;
+  lastSelectionStart = null;
+  lastSelectionEnd = null;
 
   document.getElementById("mission-title").textContent = lv.title;
   document.getElementById("mission-desc").textContent = lv.desc;
@@ -1030,18 +1072,53 @@ function loadLevel(idx) {
   hintBox.innerHTML = "";
   document.getElementById("hint-btn").textContent = `💡 Gợi ý (0/${lv.hints.length})`;
 
-  // Render Quick-Insert Bar (Sử dụng onpointerdown + preventDefault để không làm mất focus và không kích hoạt bàn phím ảo nhảy liên tục)
+  // Render Quick-Insert Bar
   const qbar = document.getElementById("quick-bar");
   qbar.innerHTML = "";
+
+  let isBarScrolling = false;
+  let scrollDebounce = null;
+  qbar.onscroll = () => {
+    isBarScrolling = true;
+    clearTimeout(scrollDebounce);
+    scrollDebounce = setTimeout(() => {
+      isBarScrolling = false;
+    }, 120);
+  };
+
   lv.quickKeys.forEach(k => {
     const b = document.createElement("button");
     b.className = "qbtn " + (k.cls || "");
     b.textContent = k.label;
     b.type = "button";
-    b.onpointerdown = (e) => {
-      e.preventDefault();
+
+    let startX = 0;
+    let startY = 0;
+    let isSwiping = false;
+
+    b.addEventListener("pointerdown", (e) => {
+      startX = e.clientX;
+      startY = e.clientY;
+      isSwiping = false;
+    }, { passive: true });
+
+    b.addEventListener("pointermove", (e) => {
+      const dx = Math.abs(e.clientX - startX);
+      const dy = Math.abs(e.clientY - startY);
+      if (dx > 6 || dy > 6) {
+        isSwiping = true;
+      }
+    }, { passive: true });
+
+    b.addEventListener("click", (e) => {
+      if (isSwiping || isBarScrolling) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
       insertAtCursor(k.insert);
-    };
+    });
+
     qbar.appendChild(b);
   });
 
@@ -1058,7 +1135,7 @@ function loadLevel(idx) {
 
   switchTab("preview");
   renderPills();
-  updatePreviewAndCheck();
+  updatePreviewAndCheck(true); // force reload iframe with new level's HTML
 }
 
 function switchTab(tab) {
@@ -1072,13 +1149,31 @@ function switchTab(tab) {
 /* CHÈN PHÍM TẮT VÀO VỊ TRÍ CON TRỎ THÔNG MINH */
 function insertAtCursor(text) {
   const ta = document.getElementById("css-editor");
-  const start = ta.selectionStart != null ? ta.selectionStart : ta.value.length;
-  const end = ta.selectionEnd != null ? ta.selectionEnd : ta.value.length;
   const val = ta.value;
+
+  let start = ta.selectionStart;
+  let end = ta.selectionEnd;
+
+  if (start == null || (start === 0 && end === 0 && lastSelectionStart == null)) {
+    const firstBrace = val.indexOf("{\n");
+    if (firstBrace !== -1) {
+      start = firstBrace + 4;
+      end = start;
+    } else {
+      start = val.length;
+      end = val.length;
+    }
+  } else if (lastSelectionStart != null && document.activeElement !== ta) {
+    start = lastSelectionStart;
+    end = lastSelectionEnd;
+  }
+
+  start = Math.max(0, Math.min(start, val.length));
+  end = Math.max(start, Math.min(end, val.length));
 
   let cursorOffset = text.length;
   if (text === "{\n  \n}") {
-    cursorOffset = 4; // Đặt con trỏ vào giữa dấu ngoặc nhọn
+    cursorOffset = 4;
   } else if (text === "{ }") {
     cursorOffset = 2;
   }
@@ -1086,18 +1181,19 @@ function insertAtCursor(text) {
   ta.value = val.slice(0, start) + text + val.slice(end);
   const newPos = start + cursorOffset;
   ta.setSelectionRange(newPos, newPos);
+  lastSelectionStart = newPos;
+  lastSelectionEnd = newPos;
 
   savedCss[currentIdx] = ta.value;
   saveStateToStorage();
-  updatePreviewAndCheck();
+  updatePreviewAndCheck(false); // fast live update
 }
 
-/* ĐẢO KHỐI RULE h1 THÔNG MINH (HỖ TRỢ CẢ 1 DÒNG LẪN NHIỀU DÒNG) */
+/* ĐẢO KHỐI RULE h1 THÔNG MINH */
 function swapH1Lines() {
   const ta = document.getElementById("css-editor");
   const css = ta.value;
 
-  // Khớp chính xác các khối rule h1 { ... }
   const regex = /(h1\s*\{[^}]*\})/gi;
   const matches = [...css.matchAll(regex)];
 
@@ -1117,7 +1213,7 @@ function swapH1Lines() {
     ta.value = partBefore + secondMatch[0] + middlePart + firstMatch[0] + partAfter;
     savedCss[currentIdx] = ta.value;
     saveStateToStorage();
-    updatePreviewAndCheck();
+    updatePreviewAndCheck(false);
   }
 }
 
@@ -1126,7 +1222,7 @@ function resetCurrentLevel() {
     savedCss[currentIdx] = LEVELS[currentIdx].starterCss;
     document.getElementById("css-editor").value = savedCss[currentIdx];
     saveStateToStorage();
-    updatePreviewAndCheck();
+    updatePreviewAndCheck(false);
   }
 }
 
@@ -1139,44 +1235,72 @@ function showNextHint() {
   document.getElementById("hint-btn").textContent = `💡 Gợi ý (${hintStage}/${lv.hints.length})`;
 }
 
-function updatePreviewAndCheck() {
+/**
+ * CẬP NHẬT TRỰC TIẾP KHUNG HIỂN THỊ (LIVE PREVIEW ENGINE)
+ * - Khi đang gõ: Cập nhật thẳng vào thẻ <style id="live-css"> trong DOM (0ms độ trễ, không reload iframe, phản hồi 100% theo từng ký tự gõ ở dưới).
+ * - Không áp đặt màu sắc/phông chữ cố định để CSS của học sinh toàn quyền chi phối giao diện.
+ */
+function updatePreviewAndCheck(forceReload = false) {
   const lv = LEVELS[currentIdx];
   const css = document.getElementById("css-editor").value;
   savedCss[currentIdx] = css;
 
   const frame = document.getElementById("preview-frame");
-  const docHtml = `<!DOCTYPE html>
+  
+  let frameDoc = null;
+  try {
+    frameDoc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+  } catch (e) {
+    frameDoc = null;
+  }
+
+  const currentLevelMarker = frameDoc ? frameDoc.getElementById("__current_level") : null;
+  const isSameLevel = currentLevelMarker && currentLevelMarker.getAttribute("data-level") === String(lv.id);
+
+  if (!forceReload && frameDoc && isSameLevel) {
+    // ĐƯỜNG TRUYỀN TỨC THÌ: Cập nhật thẳng CSS vào thẻ <style> đang chạy
+    let styleTag = frameDoc.getElementById("live-css");
+    if (!styleTag) {
+      styleTag = frameDoc.createElement("style");
+      styleTag.id = "live-css";
+      frameDoc.head.appendChild(styleTag);
+    }
+    styleTag.textContent = css;
+
+    // Chấm điểm ngay lập tức trên DOM đang hiển thị
+    runChecks(frameDoc, css);
+  } else {
+    // KHỞI TẠO HOẶC ĐỔI MÀN MỚI
+    const docHtml = `<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <style>
+  /* Chỉ giữ margin viền 10px để không sát mép khung. Không ép màu/font để code ở dưới kiểm soát 100% */
   body {
     margin: 10px;
-    font-family: system-ui, -apple-system, sans-serif;
     line-height: 1.45;
-    font-size: 14px;
-    color: #1e293b;
   }
-  h1 { margin: 0 0 8px; font-size: 18px; }
-  h2 { margin: 0 0 6px; font-size: 16px; }
-  p { margin: 0 0 8px; }
-  ${css}
+</style>
+<style id="live-css">
+${css}
 </style>
 </head>
 <body>
+  <div id="__current_level" data-level="${lv.id}" style="display:none;"></div>
   ${lv.html}
   <span id="__ref_sans" style="display:none; font-family: sans-serif !important;">ref</span>
 </body>
 </html>`;
 
-  frame.onload = () => {
-    try {
-      runChecks(frame.contentDocument, css);
-    } catch (e) {
-      // Bảo vệ chống lỗi iframe sandbox
-    }
-  };
-  frame.srcdoc = docHtml;
+    frame.onload = () => {
+      try {
+        const loadedDoc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+        if (loadedDoc) runChecks(loadedDoc, css);
+      } catch (e) {}
+    };
+    frame.srcdoc = docHtml;
+  }
 }
 
 function runChecks(doc, css) {
@@ -1236,7 +1360,6 @@ function goNextLevel() {
   if (currentIdx < 2) {
     loadLevel(currentIdx + 1);
   } else {
-    // Hoàn thành cả 3 màn chính
     showFinishScreen();
   }
 }
@@ -1244,7 +1367,6 @@ function goNextLevel() {
 function showFinishScreen() {
   if (timerInterval) clearInterval(timerInterval);
 
-  // Bảo lưu thời gian hoàn thành lần đầu tiên
   if (!initialFinishedTimeStr) {
     const elapsed = Math.floor((Date.now() - (startTime || Date.now())) / 1000);
     initialFinishedTimeStr = formatTime(elapsed);
@@ -1258,7 +1380,6 @@ function showFinishScreen() {
   const doneMain = [0, 1, 2].filter(i => completed[i]).length;
   document.getElementById("final-score").textContent = `${doneMain} / 3`;
 
-  // Tạo và hiển thị mã xác nhận chống gian lận
   if (!certCode) {
     certCode = generateCertCode(displayName, initialFinishedTimeStr);
     certTimestamp = getNowTimestamp();
@@ -1331,11 +1452,24 @@ function launchConfetti() {
   update();
 }
 
-/* LẮNG NGHE SỰ KIỆN GÕ PHÍM */
-document.getElementById("css-editor").addEventListener("input", () => {
+/* THEO DÕI VỊ TRÍ CON TRỎ KHI HỌC SINH TƯƠNG TÁC VỚI TEXTAREA */
+const editorEl = document.getElementById("css-editor");
+function updateSelectionRecord() {
+  if (editorEl) {
+    lastSelectionStart = editorEl.selectionStart;
+    lastSelectionEnd = editorEl.selectionEnd;
+  }
+}
+
+editorEl.addEventListener("input", () => {
+  updateSelectionRecord();
   saveStateToStorage();
-  updatePreviewAndCheck();
+  updatePreviewAndCheck(false); // Cập nhật trực tiếp 0ms độ trễ
 });
+editorEl.addEventListener("keyup", updateSelectionRecord);
+editorEl.addEventListener("click", updateSelectionRecord);
+editorEl.addEventListener("touchend", updateSelectionRecord);
+editorEl.addEventListener("select", updateSelectionRecord);
 
 document.getElementById("student-name").addEventListener("keydown", (e) => {
   if (e.key === "Enter") startGame();
