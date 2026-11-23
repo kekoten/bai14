@@ -370,6 +370,34 @@
   }
 
   /* EDITOR & QUICK-INSERT BAR */
+  
+  /* Khung hiển thị CSS cố định ở cuối file */
+  .locked-code-box {
+    margin-top: 8px;
+    background: #f8fafc;
+    border: 1.5px dashed #94a3b8;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .locked-label {
+    font-weight: 700;
+    font-size: 11.5px;
+    color: #475569;
+    margin-bottom: 5px;
+  }
+  .locked-code-box pre {
+    margin: 0;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    color: #1e293b;
+    white-space: pre-wrap;
+    background: #f1f5f9;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    line-height: 1.4;
+  }
   .editor-header {
     display: flex;
     justify-content: space-between;
@@ -597,11 +625,12 @@
   <div class="start-card">
     <span class="badge">TIN HỌC 12 • BÀI 14 • MỤC 2C</span>
     <h1>Đấu Trường CSS</h1>
-    <p>Thực hành định dạng văn bản, tính kế thừa, thứ tự ưu tiên, <strong>*</strong> và <strong>!important</strong> ngay trên điện thoại (chạy 100% offline).</p>
+    <p>Thực hành định dạng văn bản, tính kế thừa, thứ tự ưu tiên, <strong>*</strong> và <strong>!important</strong> trên điện thoại (100% offline, thời lượng mục tiêu 10–12 phút).</p>
     <div class="info-list">
-      <div><strong>Màn 1:</strong> Tân trang bài viết <em>Lịch sử CSS</em> (Ôn 1a–1c)</div>
-      <div><strong>Màn 2:</strong> Đảo ngược thứ tự ưu tiên (Ôn 2a–2b)</div>
-      <div><strong>Màn 3:</strong> Trùm cuối với <code>*</code> và <code>!important</code> (Mục 2c)</div>
+      <div><strong>Màn 1:</strong> Bác sĩ sửa lỗi CSS (Ôn 1a–1c: sửa lỗi cú pháp ở h1 + căn đoạn văn)</div>
+      <div><strong>Màn 2:</strong> Tính kế thừa & Thứ tự ưu tiên (Ôn 2a–2b: dùng body và ghi đè h1, p)</div>
+      <div><strong>Màn 3:</strong> Trùm cuối với <code>*</code> và <code>!important</code> (Mục 2c: thắng chọn lọc)</div>
+      <div><strong>Chế độ Tự do:</strong> Mở khóa sau khi hoàn thành 3 màn chính</div>
     </div>
     <div class="input-group">
       <label for="student-name">Họ và tên (hoặc STT + Tên):</label>
@@ -654,7 +683,6 @@
       <div class="editor-header">
         <span class="editor-label">✏️ Nhập CSS trong &lt;style&gt; (Hiển thị trực tiếp ở trên)</span>
         <div style="display:flex; gap:6px;">
-          <button class="btn btn-outline btn-sm" id="swap-btn" style="display:none;" onclick="swapH1Lines()">⇅ Đảo 2 dòng h1</button>
           <button class="btn btn-outline btn-sm" id="undo-btn" onclick="undoEditor()" title="Hoàn tác thao tác vừa nhập">↩ Hoàn tác</button>
           <button class="btn btn-outline btn-sm" onclick="resetCurrentLevel()">↺ Làm lại</button>
         </div>
@@ -667,12 +695,24 @@
         <button type="button" class="qbar-arrow" onclick="scrollQuickBar(140)" aria-label="Xem phím sau">›</button>
       </div>
 
+      
+      <!-- Khung hiển thị CSS cố định ở đầu file (Chỉ đọc) -->
+      <div class="locked-code-box locked-top-box" id="locked-top-box" style="display:none; margin-top:0; margin-bottom:8px;">
+        <div class="locked-label">🔒 Quy tắc CSS có sẵn ở đầu file (Luôn áp dụng trước code của em):</div>
+        <pre id="locked-top-text"></pre>
+      </div>
+
       <textarea id="css-editor"
         spellcheck="false"
         autocapitalize="off"
         autocomplete="off"
         autocorrect="off"
         placeholder="Nhập mã CSS tại đây..."></textarea>
+      <!-- Khung hiển thị CSS cố định (Chỉ đọc) ở Màn 4 -->
+      <div class="locked-code-box" id="locked-code-box" style="display:none;">
+        <div class="locked-label">🔒 Quy tắc CSS cố định ở cuối file (Luôn áp dụng sau code của em):</div>
+        <pre id="locked-code-text"></pre>
+      </div>
 
       <div class="action-row">
         <span id="status-text">Đạt đủ tiêu chí để qua màn</span>
@@ -733,9 +773,31 @@ function stripComments(css) {
 }
 
 // Trích xuất phần thân { ... } của đúng selector cần kiểm tra (tránh đặt sai chỗ mà vẫn pass)
+
+function countSelectorBlocks(css) {
+  const clean = stripComments(css);
+  const matches = clean.match(/[^{}]+(?=\{)/g) || [];
+  const selectors = matches.map(s => s.trim()).filter(s => s.length > 0 && !s.startsWith("@"));
+  return {
+    count: selectors.length,
+    selectors: selectors
+  };
+}
+
+function checkPreservedRules(css, requiredSnippets) {
+  const clean = stripComments(css).replace(/\s+/g, " ");
+  for (const snip of requiredSnippets) {
+    const reg = new RegExp(snip.replace(/([:;{}])/g, "\\s*$1\\s*"), "i");
+    if (!reg.test(clean)) {
+      return { ok: false, missing: snip };
+    }
+  }
+  return { ok: true };
+}
+
 function getRuleBody(css, selector) {
   const clean = stripComments(css);
-  const escaped = selector === "*" ? "\\*" : selector;
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const regex = new RegExp("(?:^|[\\s},])" + escaped + "\\s*\\{([^}]*)\\}", "gi");
   let bodies = [];
   let match;
@@ -745,225 +807,321 @@ function getRuleBody(css, selector) {
   return bodies.join(" ");
 }
 
+/* ===== DỮ LIỆU CÁC MÀN CHƠI ===== */
+/* ===== DỮ LIỆU CÁC MÀN CHƠI ===== */
 const LEVELS = [
+  // --- MÀN 1: BÁC SĨ SỬA LỖI CSS (ÔN 1a - 1c) ---
   {
     id: 1,
     pill: "Màn 1",
-    title: "Màn 1: Tân trang 'Lịch sử CSS' (Ôn 1a – 1c)",
-    desc: "Viết CSS để định dạng đoạn văn bản giống Hình 14.1 SGK theo 4 tiêu chí bên dưới:",
-    html: `<h1>Lịch sử CSS</h1>\n<p>Ý tưởng của CSS do kĩ sư <em>Håkon Wium Lie</em>, người Na Uy, thiết lập năm 1994 trong khi làm việc với <em>Tim Berners-Lee</em> tại viện hạt nhân CERN.</p>`,
-    starterCss: `h1 {\n  \n}\np {\n  \n}\nem {\n  \n}`,
+    title: "Màn 1: Bác sĩ sửa lỗi CSS (Ôn 1a – 1c)",
+    desc: "Sửa 2 lỗi cú pháp ở h1 (thiếu dấu chấm phẩy, sai tên thuộc tính), tự bổ sung chữ in nghiêng cho thẻ em, và viết thêm định dạng cho thẻ p theo 4 tiêu chí bên dưới!",
+    starterCss: `h1 {\n  color: red line-align: center;\n}\nem {\n  color: purple;\n}`,
+    html: `<article>
+  <h1>Lịch sử hình thành CSS</h1>
+  <p>CSS được đề xuất lần đầu tiên bởi Håkon Wium Lie vào ngày 10 tháng 10 năm 1994. Sau đó, World Wide Web Consortium (W3C) đã chuẩn hóa CSS nhằm tách biệt nội dung trang web với phần định dạng hiển thị.</p>
+  <p>Người đồng sáng lập dự án này là <em>Håkon Wium Lie</em> cùng với sự đóng góp lớn từ <em>Bert Bos</em>.</p>
+</article>`,
     quickKeys: [
-      { label: "color:", insert: "color: ", cls: "" },
-      { label: "red;", insert: "red;", cls: "" },
-      { label: "purple;", insert: "purple;", cls: "" },
-      { label: "font-family:", insert: "font-family: ", cls: "" },
-      { label: "sans-serif;", insert: "sans-serif;", cls: "" },
-      { label: "text-indent:", insert: "text-indent: ", cls: "" },
-      { label: "2em;", insert: "2em;", cls: "" },
       { label: "{ }", insert: "{\n  \n}", cls: "sym" },
-      { label: ":", insert: ": ", cls: "sym" },
-      { label: ";", insert: ";", cls: "sym" }
+      { label: ":", insert: ": " },
+      { label: ";", insert: ";" },
+      { label: "p", insert: "p " },
+      { label: "text-align:", insert: "text-align: " },
+      { label: "center;", insert: "center;" },
+      { label: "left;", insert: "left;" },
+      { label: "justify;", insert: "justify;" },
+      { label: "line-align:", insert: "line-align: " },
+      { label: "font-style:", insert: "font-style: " },
+      { label: "italic;", insert: "italic;" },
+      { label: "normal;", insert: "normal;" },
+      { label: "bold;", insert: "bold;" },
+      { label: "text-indent:", insert: "text-indent: " },
+      { label: "2em;", insert: "2em;" },
+      { label: "1em;", insert: "1em;" },
+      { label: "line-height:", insert: "line-height: " },
+      { label: "1.6;", insert: "1.6;" },
+      { label: "1.2;", insert: "1.2;" },
+      { label: "color:", insert: "color: " },
+      { label: "red;", insert: "red;" },
+      { label: "purple;", insert: "purple;" },
+      { label: "blue;", insert: "blue;" }
     ],
     hints: [
-      "Nấc 1: Dùng thuộc tính <code>color</code> cho màu chữ, <code>font-family</code> cho phông chữ (không chân là <code>sans-serif</code>), và <code>text-indent</code> để thụt lề đầu dòng.",
-      "Nấc 2: Gõ vào trong ngoặc nhọn: <code>h1 { color: red; font-family: sans-serif; }</code>, <code>p { text-indent: 2em; }</code>, <code>em { color: purple; }</code>."
+      "Nấc 1: Sửa h1: sau 'red' thiếu dấu ';' và thuộc tính căn giữa là 'text-align'. Bổ sung chữ in nghiêng cho thẻ em bằng thuộc tính: font-style: italic;.",
+      "Nấc 2: Khung gợi ý: h1 { color: red; text-align: center; } | em { color: purple; font-style: italic; } | p { text-indent: 2em; line-height: 1.6; }."
     ],
-    showSwap: false,
     checks: [
       {
-        label: "Tiêu đề h1 có chữ màu đỏ (red)",
+        label: "Sửa lỗi h1: Chữ màu đỏ (red) và căn giữa (center)",
         test: (doc, css) => {
           const el = doc.querySelector("h1");
           if (!el) return false;
           const h1Body = getRuleBody(css, "h1");
-          const hasRedInH1 = /color\s*:\s*(red|#f00|#ff0000|rgb\(\s*255\s*,\s*0\s*,\s*0\s*\))/i.test(h1Body);
-          const isRed = doc.defaultView.getComputedStyle(el).color === "rgb(255, 0, 0)";
-          return hasRedInH1 && isRed;
+          const hasRed = /color\s*:\s*(red|#f00|#ff0000|rgb\(\s*255\s*,\s*0\s*,\s*0\s*\))/i.test(h1Body);
+          const hasTextAlign = /text-align\s*:\s*center/i.test(h1Body);
+          const noLineAlign = !/line-align/i.test(css);
+          const cs = doc.defaultView.getComputedStyle(el);
+          return hasRed && hasTextAlign && noLineAlign && cs.color === "rgb(255, 0, 0)" && cs.textAlign === "center";
         }
       },
       {
-        label: "Tiêu đề h1 dùng phông không chân (sans-serif)",
-        test: (doc, css) => {
-          const el = doc.querySelector("h1");
-          if (!el) return false;
-          const h1Body = getRuleBody(css, "h1");
-          const hasSansInH1 = /font-family\s*:\s*[^;}]*sans-serif/i.test(h1Body);
-          if (!hasSansInH1) return false;
-
-          const h1Font = doc.defaultView.getComputedStyle(el).fontFamily.toLowerCase();
-          const refEl = doc.getElementById("__ref_sans");
-          const refFont = refEl ? doc.defaultView.getComputedStyle(refEl).fontFamily.toLowerCase() : "";
-          return hasSansInH1 && (h1Font === refFont || h1Font.includes("sans-serif"));
-        }
-      },
-      {
-        label: "Đoạn văn p thụt lề dòng đầu tiên (text-indent > 0)",
-        test: (doc, css) => {
-          const el = doc.querySelector("p");
-          if (!el) return false;
-          const pBody = getRuleBody(css, "p");
-          const hasIndentInP = /text-indent\s*:\s*[^;}]/i.test(pBody);
-          const isIndented = parseFloat(doc.defaultView.getComputedStyle(el).textIndent) > 0;
-          return hasIndentInP && isIndented;
-        }
-      },
-      {
-        label: "Tên tác giả trong thẻ em có chữ màu tím (purple)",
+        label: "Thẻ em có chữ in nghiêng (italic) và màu tím (purple)",
         test: (doc, css) => {
           const el = doc.querySelector("em");
           if (!el) return false;
           const emBody = getRuleBody(css, "em");
-          const hasPurpleInEm = /color\s*:\s*(purple|#800080|rgb\(\s*128\s*,\s*0\s*,\s*128\s*\))/i.test(emBody);
-          const isPurple = doc.defaultView.getComputedStyle(el).color === "rgb(128, 0, 128)";
-          return hasPurpleInEm && isPurple;
+          const hasItalic = /font-style\s*:\s*italic/i.test(emBody);
+          const hasPurple = /color\s*:\s*(purple|#800080|rgb\(\s*128\s*,\s*0\s*,\s*128\s*\))/i.test(emBody);
+          const cs = doc.defaultView.getComputedStyle(el);
+          return hasItalic && hasPurple && cs.fontStyle === "italic" && cs.color === "rgb(128, 0, 128)";
+        }
+      },
+      {
+        label: "Đoạn văn p thụt lề dòng đầu tiên (ví dụ 2em hoặc > 0)",
+        test: (doc, css) => {
+          const el = doc.querySelector("p");
+          if (!el) return false;
+          const pBody = getRuleBody(css, "p");
+          const hasIndent = /text-indent\s*:\s*[^;}]/i.test(pBody);
+          const isIndented = parseFloat(doc.defaultView.getComputedStyle(el).textIndent) > 0;
+          return hasIndent && isIndented;
+        }
+      },
+      {
+        label: "Đoạn văn p có khoảng cách dòng thoáng hơn (từ 1.6 hoặc 24px trở lên)",
+        test: (doc, css) => {
+          const el = doc.querySelector("p");
+          if (!el) return false;
+          const pBody = getRuleBody(css, "p");
+          const hasLineHeight = /line-height\s*:\s*[^;}]/i.test(pBody);
+          const cs = doc.defaultView.getComputedStyle(el);
+          const lh = parseFloat(cs.lineHeight);
+          const fs = parseFloat(cs.fontSize) || 16;
+          return hasLineHeight && (lh >= fs * 1.55 || lh >= 24);
         }
       }
     ]
   },
+  // --- MÀN 2: TÍNH KẾ THỪA & THỨ TỰ ƯU TIÊN (ÔN 2a - 2b) ---
   {
     id: 2,
     pill: "Màn 2",
-    title: "Màn 2: Đảo ngược thứ tự ưu tiên (Ôn 2a – 2b)",
-    desc: "Hiện tại h1 bị căn trái do quy tắc viết sau đè lên quy tắc viết trước. KHÔNG XÓA dòng căn trái, hãy làm cho h1 căn giữa (bạn có thể bấm nút 'Đảo 2 dòng h1' hoặc tự đổi thứ tự).",
-    html: `<h1>Tính kế thừa của CSS</h1>\n<h2>1. Mô hình cây HTML</h2>\n<p>Đây là đoạn đầu tiên...</p>`,
-    starterCss: `body { color: blue; }\nh1 { color: red; text-align: center; }\nh1 { text-align: left; }`,
+    title: "Màn 2: Tính kế thừa & Thứ tự ưu tiên (Ôn 2a – 2b)",
+    desc: "Phía trên ô nhập có sẵn 2 quy tắc cố định. Hãy viết thêm CSS vào ô bên dưới để: (1) toàn trang kế thừa phông không chân từ body, (2) đè lại tiêu đề h1 thành màu đỏ + căn giữa, và (3) đè lại đoạn văn p thành căn đều hai bên + cỡ chữ 18px!",
+    lockedTopCss: `h1 {\n  color: green;\n  text-align: left;\n}\np {\n  text-align: left;\n  font-size: 13px;\n}`,
+    starterCss: "",
+    html: `<article>\n  <h1>Kế thừa và Thứ tự ưu tiên</h1>\n  <p>Mọi phần tử con và <span>phần tử cháu (span)</span> đều tự động kế thừa phông chữ từ thẻ cha body.</p>\n  <p>Khi có nhiều quy tắc cùng tác động lên một phần tử, trình duyệt sẽ áp dụng quy tắc được viết sau cùng.</p>\n</article>`,
     quickKeys: [
-      { label: "text-align:", insert: "text-align: ", cls: "" },
-      { label: "center;", insert: "center;", cls: "" },
-      { label: "left;", insert: "left;", cls: "" },
-      { label: "color:", insert: "color: ", cls: "" },
-      { label: "blue;", insert: "blue;", cls: "" },
-      { label: "red;", insert: "red;", cls: "" },
-      { label: "{ }", insert: "{ }", cls: "sym" },
-      { label: ";", insert: ";", cls: "sym" }
+      { label: "{ }", insert: "{\n  \n}", cls: "sym" },
+      { label: ":", insert: ": " },
+      { label: ";", insert: ";" },
+      { label: "body", insert: "body " },
+      { label: "h1", insert: "h1 " },
+      { label: "p", insert: "p " },
+      { label: "span", insert: "span " },
+      { label: "font-family:", insert: "font-family: " },
+      { label: "sans-serif;", insert: "sans-serif;" },
+      { label: "Arial;", insert: "Arial;" },
+      { label: "serif;", insert: "serif;" },
+      { label: "monospace;", insert: "monospace;" },
+      { label: "color:", insert: "color: " },
+      { label: "red;", insert: "red;" },
+      { label: "green;", insert: "green;" },
+      { label: "blue;", insert: "blue;" },
+      { label: "text-align:", insert: "text-align: " },
+      { label: "center;", insert: "center;" },
+      { label: "justify;", insert: "justify;" },
+      { label: "left;", insert: "left;" },
+      { label: "right;", insert: "right;" },
+      { label: "font-size:", insert: "font-size: " },
+      { label: "18px;", insert: "18px;" },
+      { label: "16px;", insert: "16px;" },
+      { label: "13px;", insert: "13px;" }
     ],
     hints: [
-      "Nấc 1: Khi có nhiều mẫu định dạng cho cùng bộ chọn <code>h1</code>, trình duyệt sẽ áp dụng mẫu được viết <strong>cuối cùng</strong>.",
-      "Nấc 2: Đưa dòng <code>h1 { text-align: left; }</code> lên phía trên dòng <code>h1 { color: red; text-align: center; }</code> (hoặc bấm nút <strong>⇅ Đảo 2 dòng h1</strong>)."
+      "Nấc 1: Dùng bộ chọn body với thuộc tính font-family để cả trang tự kế thừa. Viết lại bộ chọn h1 và p ở ô dưới sẽ tự động ghi đè các quy tắc ở khung khóa phía trên.",
+      "Nấc 2: Khung gợi ý: body { font-family: sans-serif; } | h1 { color: red; text-align: center; } | p { text-align: justify; font-size: 18px; }"
     ],
-    showSwap: true,
     checks: [
       {
-        label: "Thẻ h2 và p kế thừa màu xanh dương (blue) từ body",
+        label: "Tính kế thừa: Toàn trang dùng phông không chân (sans-serif hoặc Arial) khai báo từ body",
         test: (doc, css) => {
-          const h2 = doc.querySelector("h2");
-          const p = doc.querySelector("p");
-          if (!h2 || !p) return false;
-          const bodyRule = getRuleBody(css, "body");
-          const hasBlueInBody = /color\s*:\s*(blue|#00f|#0000ff|rgb\(\s*0\s*,\s*0\s*,\s*255\s*\))/i.test(bodyRule);
-          const cs = doc.defaultView.getComputedStyle;
-          return hasBlueInBody && cs(h2).color === "rgb(0, 0, 255)" && cs(p).color === "rgb(0, 0, 255)";
+          const bodyBody = getRuleBody(css, "body");
+          const hasFontInBody = /font-family\s*:\s*[^;}]*(sans-serif|arial)/i.test(bodyBody);
+          if (!hasFontInBody) return false;
+          const span = doc.querySelector("span");
+          if (!span) return false;
+          const spanFont = doc.defaultView.getComputedStyle(span).fontFamily.toLowerCase();
+          const refEl = doc.getElementById("__ref_sans");
+          const refFont = refEl ? doc.defaultView.getComputedStyle(refEl).fontFamily.toLowerCase() : "";
+          return hasFontInBody && (spanFont === refFont || spanFont.includes("sans-serif") || spanFont.includes("arial"));
         }
       },
       {
-        label: "Tiêu đề h1 vẫn giữ màu đỏ (red)",
-        test: (doc) => {
-          const el = doc.querySelector("h1");
-          return el && doc.defaultView.getComputedStyle(el).color === "rgb(255, 0, 0)";
-        }
-      },
-      {
-        label: "Tiêu đề h1 căn giữa (center) mà KHÔNG xóa dòng text-align: left",
+        label: "Ghi đè h1: Tiêu đề h1 có chữ màu đỏ (red) và căn giữa (center)",
         test: (doc, css) => {
           const el = doc.querySelector("h1");
           if (!el) return false;
-          const clean = stripComments(css);
-          const hasLeft = /text-align\s*:\s*left/i.test(clean);
-          const isCenter = doc.defaultView.getComputedStyle(el).textAlign === "center";
-          return hasLeft && isCenter;
+          const h1Body = getRuleBody(css, "h1");
+          const hasRed = /color\s*:\s*(red|#f00|#ff0000|rgb\(\s*255\s*,\s*0\s*,\s*0\s*\))/i.test(h1Body);
+          const hasCenter = /text-align\s*:\s*center/i.test(h1Body);
+          const cs = doc.defaultView.getComputedStyle(el);
+          return hasRed && hasCenter && cs.color === "rgb(255, 0, 0)" && cs.textAlign === "center";
+        }
+      },
+      {
+        label: "Ghi đè p: Đoạn văn p căn đều hai bên (justify) và cỡ chữ lớn (từ 18px trở lên)",
+        test: (doc, css) => {
+          const el = doc.querySelector("p");
+          if (!el) return false;
+          const pBody = getRuleBody(css, "p");
+          const hasJustify = /text-align\s*:\s*justify/i.test(pBody);
+          const hasFontSize = /font-size\s*:\s*[^;}]*/i.test(pBody);
+          const cs = doc.defaultView.getComputedStyle(el);
+          return hasJustify && hasFontSize && cs.textAlign === "justify" && parseFloat(cs.fontSize) >= 17.5;
         }
       }
     ]
   },
+
+  // --- MÀN 3: TRÙM CUỐI * VÀ !IMPORTANT (MỤC 2c) ---
   {
     id: 3,
     pill: "Màn 3",
     title: "Màn 3: Trùm cuối * và !important (Mục 2c)",
-    desc: "LUẬT CHƠI: Không được xóa hay đổi vị trí dòng h1 thứ hai! Hãy dùng từ khóa !important đúng chỗ để h1 căn giữa (như Hình 14.7 SGK), đồng thời giữ nguyên quy tắc * cho toàn trang.",
-    html: `<h1>Lịch sử CSS</h1>\n<p>Ý tưởng của CSS do kĩ sư Håkon Wium Lie, người Na Uy, thiết lập năm 1994 trong khi làm việc với Tim Berners-Lee tại viện hạt nhân CERN.</p>`,
-    starterCss: `h1 {\n  text-indent: 0em;\n  color: blue;\n  text-align: center;\n}\nh1 { text-align: left; color: red; }\n* { text-indent: 1em; color: blue; }`,
+    desc: "Dưới ô nhập có 2 quy tắc CỐ ĐỊNH ở cuối file. Hãy sửa bẫy cú pháp !important cho h1 (giữ màu đỏ, không thụt lề 0em); viết thêm quy tắc cho p đổi sang màu blue (hoặc purple) để thắng bộ chọn * mà KHÔNG DÙNG !important!",
+    starterCss: `h1 {\n  text-indent: 0em;\n  color: blue;\n  text-align: center; !important\n}`,
+    lockedBottomCss: `h1 {\n  text-align: left;\n  color: red;\n}\n* {\n  color: green;\n  text-indent: 1em;\n}`,
+    html: `<div class="main-content">
+  <h1>Kí hiệu * và từ khóa !important</h1>
+  <h2>Quy tắc đặc biệt trong định dạng CSS</h2>
+  <p>Kí hiệu sao (*) áp dụng cho toàn bộ phần tử nhưng có độ ưu tiên thấp nhất. Từ khóa !important giúp một thuộc tính giành quyền ưu tiên tuyệt đối.</p>
+</div>`,
     quickKeys: [
+      { label: "{ }", insert: "{\n  \n}", cls: "sym" },
+      { label: ":", insert: ": " },
+      { label: ";", insert: ";" },
       { label: "!important", insert: " !important", cls: "imp" },
-      { label: "*", insert: "* ", cls: "imp" },
-      { label: "text-align:", insert: "text-align: ", cls: "" },
-      { label: "center", insert: "center", cls: "" },
-      { label: "text-indent:", insert: "text-indent: ", cls: "" },
-      { label: "color:", insert: "color: ", cls: "" },
-      { label: "{ }", insert: "{ }", cls: "sym" },
-      { label: ";", insert: ";", cls: "sym" }
+      { label: "*", insert: "* " },
+      { label: "p", insert: "p " },
+      { label: "h1", insert: "h1 " },
+      { label: "h2", insert: "h2 " },
+      { label: "color:", insert: "color: " },
+      { label: "blue;", insert: "blue;" },
+      { label: "purple;", insert: "purple;" },
+      { label: "green;", insert: "green;" },
+      { label: "red;", insert: "red;" },
+      { label: "text-align:", insert: "text-align: " },
+      { label: "center;", insert: "center;" },
+      { label: "left;", insert: "left;" },
+      { label: "text-indent:", insert: "text-indent: " },
+      { label: "0em;", insert: "0em;" },
+      { label: "1em;", insert: "1em;" },
+      { label: "2em;", insert: "2em;" }
     ],
     hints: [
-      "Nấc 1: Từ khóa <code>!important</code> đặt ngay sau giá trị của thuộc tính cần ưu tiên cao nhất (trước dấu chấm phẩy <code>;</code>).",
-      "Nấc 2: Chỉ cần sửa dòng thứ 4 thành <code>text-align: center !important;</code>. Lưu ý: KHÔNG thêm !important vào <code>color: blue;</code> vì h1 vẫn cần màu đỏ từ dòng dưới!"
+      "Nấc 1: Cú pháp chuẩn: !important phải đặt TRƯỚC dấu chấm phẩy ; (sửa thành text-align: center !important;). Đừng đặt !important vào color: blue; vì h1 cần nhận màu đỏ từ dòng khóa bên dưới!",
+      "Nấc 2: Bộ chọn thẻ p tự nhiên mạnh hơn bộ chọn sao * nên chỉ cần viết: p { color: blue; } (tuyệt đối KHÔNG thêm !important vào p). Tiêu đề h2 sẽ tự động nhận màu green và thụt lề từ *."
     ],
-    showSwap: false,
     checks: [
       {
-        label: "h1 căn giữa nhờ !important (vẫn giữ dòng text-align: left ở dưới)",
+        label: "Sửa đúng cú pháp: h1 căn giữa (center) nhờ !important (thắng quy tắc căn trái ở khung khóa)",
         test: (doc, css) => {
           const el = doc.querySelector("h1");
           if (!el) return false;
           const clean = stripComments(css);
-          const hasImp = /text-align\s*:\s*center\s*!\s*important/i.test(clean);
-          const hasLeft = /text-align\s*:\s*left/i.test(clean);
-          const isCenter = doc.defaultView.getComputedStyle(el).textAlign === "center";
-          return hasImp && hasLeft && isCenter;
+          const hasCorrectImp = /text-align\s*:\s*center\s*!\s*important/i.test(clean);
+          const noBuggyImp = !/text-align\s*:\s*center\s*;\s*!\s*important/i.test(clean);
+          return hasCorrectImp && noBuggyImp && doc.defaultView.getComputedStyle(el).textAlign === "center";
         }
       },
       {
-        label: "h1 có chữ màu đỏ (red) và không bị thụt lề (0em)",
+        label: "h1 nhận màu đỏ (red) từ dòng khóa bên dưới và không thụt lề (0em)",
         test: (doc) => {
           const el = doc.querySelector("h1");
           if (!el) return false;
-          const st = doc.defaultView.getComputedStyle(el);
-          return st.color === "rgb(255, 0, 0)" && parseFloat(st.textIndent) === 0;
+          const cs = doc.defaultView.getComputedStyle(el);
+          return cs.color === "rgb(255, 0, 0)" && parseFloat(cs.textIndent) === 0;
         }
       },
       {
-        label: "Đoạn văn p nhận màu xanh dương và thụt lề từ bộ chọn *",
+        label: "Thẻ p đổi sang màu xanh dương (blue hoặc purple) mà KHÔNG dùng !important",
         test: (doc, css) => {
           const el = doc.querySelector("p");
           if (!el) return false;
-          const st = doc.defaultView.getComputedStyle(el);
-          const starBody = getRuleBody(css, "*");
-          const hasStar = starBody.length > 0;
-          return hasStar && st.color === "rgb(0, 0, 255)" && parseFloat(st.textIndent) > 0;
+          const pBody = getRuleBody(css, "p");
+          const hasImpInP = /!\s*important/i.test(pBody);
+          const csColor = doc.defaultView.getComputedStyle(el).color;
+          const isBlueOrPurple = csColor === "rgb(0, 0, 255)" || csColor === "rgb(128, 0, 128)";
+          return !hasImpInP && isBlueOrPurple;
+        }
+      },
+      {
+        label: "Thẻ h2 vẫn nhận màu xanh lá (green) và thụt lề từ bộ chọn *",
+        test: (doc) => {
+          const el = doc.querySelector("h2");
+          if (!el) return false;
+          const cs = doc.defaultView.getComputedStyle(el);
+          return cs.color === "rgb(0, 128, 0)" && parseFloat(cs.textIndent) > 0;
         }
       }
     ]
   },
+
+  // --- MÀN 4: CHẾ ĐỘ TỰ DO (SANDBOX) ---
   {
     id: 4,
     pill: "Tự do",
     title: "Chế độ Tự do: Sáng tạo trang web của riêng em",
-    desc: "Em đã hoàn thành thử thách! Giờ hãy thử nghiệm thêm: font-size, font-weight, font-style: italic, line-height, text-decoration...",
-    html: `<h1>Lịch sử CSS</h1>\n<h2>Giới thiệu chung</h2>\n<p>Ý tưởng của CSS do kĩ sư <em>Håkon Wium Lie</em>, người Na Uy, thiết lập năm 1994 trong khi làm việc với <strong>Tim Berners-Lee</strong> tại viện hạt nhân CERN.</p>`,
-    starterCss: `body { font-family: sans-serif; }\nh1 { color: red; text-align: center; text-decoration: underline; }\np { line-height: 1.6; text-indent: 2em; text-align: justify; }\nem { color: purple; font-style: italic; }`,
+    desc: "Chúc mừng em đã hoàn thành cả 3 màn thử thách! Tại đây em có thể tự do thử nghiệm mọi thuộc tính CSS: font-size, font-weight, font-style: italic, line-height, text-decoration...",
+    starterCss: `/* Tự do thử nghiệm các định dạng văn bản nâng cao */\nbody {\n  font-family: sans-serif;\n  line-height: 1.6;\n}\n\nh1 {\n  color: #1e40af;\n  text-align: center;\n  text-decoration: underline;\n}\n\np {\n  text-indent: 2em;\n  text-align: justify;\n}\n\nem {\n  color: #b91c1c;\n  font-style: italic;\n}`,
+    html: `<article>
+  <h1>Làm chủ Định dạng Văn bản CSS</h1>
+  <h2>Kỹ năng thiết kế giao diện web hiện đại</h2>
+  <p>CSS giúp trang web trở nên trực quan, sinh động và dễ tiếp cận hơn đối với người đọc. Việc nắm vững tính kế thừa và thứ tự ưu tiên giúp mã nguồn gọn gàng và dễ bảo trì.</p>
+  <p>Hãy thử nghiệm đổi màu nền, viền, khoảng cách dòng và kích thước chữ cho các phần tử trên trang!</p>
+</article>`,
     quickKeys: [
-      { label: "font-size:", insert: "font-size: ", cls: "" },
-      { label: "font-weight:", insert: "font-weight: ", cls: "" },
-      { label: "font-style: italic;", insert: "font-style: italic;", cls: "" },
-      { label: "line-height:", insert: "line-height: ", cls: "" },
-      { label: "text-decoration:", insert: "text-decoration: ", cls: "" },
-      { label: "underline;", insert: "underline;", cls: "" },
-      { label: "line-through;", insert: "line-through;", cls: "" },
+      { label: "{ }", insert: "{\n  \n}", cls: "sym" },
+      { label: ":", insert: ": " },
+      { label: ";", insert: ";" },
+      { label: "*", insert: "* " },
       { label: "!important", insert: " !important", cls: "imp" },
-      { label: "{ }", insert: "{ }", cls: "sym" }
+      { label: "font-family:", insert: "font-family: " },
+      { label: "sans-serif;", insert: "sans-serif;" },
+      { label: "serif;", insert: "serif;" },
+      { label: "monospace;", insert: "monospace;" },
+      { label: "font-size:", insert: "font-size: " },
+      { label: "20px;", insert: "20px;" },
+      { label: "font-weight:", insert: "font-weight: " },
+      { label: "bold;", insert: "bold;" },
+      { label: "font-style:", insert: "font-style: " },
+      { label: "italic;", insert: "italic;" },
+      { label: "text-decoration:", insert: "text-decoration: " },
+      { label: "underline;", insert: "underline;" },
+      { label: "line-height:", insert: "line-height: " },
+      { label: "1.8;", insert: "1.8;" },
+      { label: "letter-spacing:", insert: "letter-spacing: " },
+      { label: "1px;", insert: "1px;" },
+      { label: "color:", insert: "color: " },
+      { label: "#2563eb;", insert: "#2563eb;" },
+      { label: "#16a34a;", insert: "#16a34a;" },
+      { label: "#dc2626;", insert: "#dc2626;" },
+      { label: "#9333ea;", insert: "#9333ea;" }
     ],
     hints: [
-      "Thử đổi <code>line-height: 2;</code> hoặc <code>text-indent: -1em;</code> để xem hiệu ứng thụt lề treo!",
-      "Lưu ý chuẩn cú pháp CSS: chữ nghiêng là <code>font-style: italic;</code> (không có chữ s) và căn lề là <code>text-align</code>."
+      "Thử dùng letter-spacing: 2px để tăng khoảng cách giữa các chữ cái.",
+      "Thử dùng font-weight: bold kết hợp font-style: italic cho thẻ em!"
     ],
-    showSwap: false,
-    isSandbox: true,
-    checks: []
+    checks: [],
+    isSandbox: true
   }
 ];
 
 let currentIdx = 0;
 let savedCss = LEVELS.map(l => l.starterCss);
-let completed = [false, false, false, false];
+let completed = LEVELS.map(() => false);
 let hintStage = 0;
 let startTime = null;
 let timerInterval = null;
@@ -1067,14 +1225,15 @@ function startGame() {
   saveStateToStorage();
   showScreen("game-screen");
 
-  const resumeIdx = (completed[0] && completed[1] && completed[2]) ? 0 : completed.findIndex(c => !c);
+  const allMainDone = [0, 1, 2].every(i => completed[i]);
+  const resumeIdx = allMainDone ? 0 : [0, 1, 2].find(i => !completed[i]);
   loadLevel(resumeIdx >= 0 ? resumeIdx : 0);
 }
 
 function renderPills() {
   const wrap = document.getElementById("level-pills");
   wrap.innerHTML = "";
-  const allMainDone = completed[0] && completed[1] && completed[2];
+  const allMainDone = [0, 1, 2].every(i => completed[i]);
 
   LEVELS.forEach((lv, idx) => {
     if (lv.isSandbox && !allMainDone) return;
@@ -1090,6 +1249,7 @@ function renderPills() {
 
 function loadLevel(idx) {
   currentIdx = idx;
+  undoStack = [];
   const lv = LEVELS[idx];
   hintStage = 0;
   lastSelectionStart = null;
@@ -1099,7 +1259,6 @@ function loadLevel(idx) {
   document.getElementById("mission-desc").textContent = lv.desc;
   document.getElementById("html-readonly").textContent = `<body>\n${lv.html}\n</body>`;
   document.getElementById("css-editor").value = savedCss[idx];
-  document.getElementById("swap-btn").style.display = lv.showSwap ? "inline-flex" : "none";
 
   // Reset Hint
   const hintBox = document.getElementById("hint-box");
@@ -1107,7 +1266,7 @@ function loadLevel(idx) {
   hintBox.innerHTML = "";
   document.getElementById("hint-btn").textContent = `💡 Gợi ý (0/${lv.hints.length})`;
 
-  // Render Quick-Insert Bar (gắn data-insert, sự kiện click xử lý tập trung chống ghost-click)
+  // Render Quick-Insert Bar (gắn data-insert, chống ghost-click)
   const qbar = document.getElementById("quick-bar");
   qbar.innerHTML = "";
 
@@ -1120,7 +1279,7 @@ function loadLevel(idx) {
     qbar.appendChild(b);
   });
 
-  // Next button label
+  // Next button label: Màn 3 là màn chính cuối cùng (idx === 2)
   const nextBtn = document.getElementById("next-btn");
   if (lv.isSandbox) {
     nextBtn.textContent = "🏆 Xem chứng nhận";
@@ -1133,7 +1292,7 @@ function loadLevel(idx) {
 
   switchTab("preview");
   renderPills();
-  updatePreviewAndCheck(true); // force reload iframe with new level's HTML
+  updatePreviewAndCheck(true); // reload iframe with new level
 }
 
 function switchTab(tab) {
@@ -1142,6 +1301,19 @@ function switchTab(tab) {
   document.getElementById("tab-html").classList.toggle("active", !isPrev);
   document.getElementById("preview-frame").style.display = isPrev ? "block" : "none";
   document.getElementById("html-readonly").style.display = isPrev ? "none" : "block";
+
+  if (!isPrev) {
+    const lv = LEVELS[currentIdx];
+    let txt = "";
+    if (lv.lockedTopCss) {
+      txt += `<!-- QUY TẮC CSS CỐ ĐỊNH Ở ĐẦU FILE (CHỈ ĐỌC): -->\n<style>\n${lv.lockedTopCss}\n</style>\n\n`;
+    }
+    txt += `<!-- NỘI DUNG HTML: -->\n<body>\n${lv.html}\n</body>`;
+    if (lv.lockedBottomCss) {
+      txt += `\n\n<!-- QUY TẮC CSS CỐ ĐỊNH Ở CUỐI FILE (CHỈ ĐỌC): -->\n<style>\n${lv.lockedBottomCss}\n</style>`;
+    }
+    document.getElementById("html-readonly").textContent = txt;
+  }
 }
 
 /* HÀM CUỘN THANH PHÍM TẮT BẰNG MŨI TÊN (CỰC KỲ TIỆN CHO MOBILE) */
@@ -1219,34 +1391,7 @@ function insertAtCursor(text) {
   updatePreviewAndCheck(false); // fast live update
 }
 
-/* ĐẢO KHỐI RULE h1 THÔNG MINH */
-function swapH1Lines() {
-  const ta = document.getElementById("css-editor");
-  const css = ta.value;
-  pushUndo(css);
 
-  const regex = /(h1\s*\{[^}]*\})/gi;
-  const matches = [...css.matchAll(regex)];
-
-  if (matches.length >= 2) {
-    const firstMatch = matches[0];
-    const secondMatch = matches[1];
-
-    const start1 = firstMatch.index;
-    const end1 = start1 + firstMatch[0].length;
-    const start2 = secondMatch.index;
-    const end2 = start2 + secondMatch[0].length;
-
-    const partBefore = css.slice(0, start1);
-    const middlePart = css.slice(end1, start2);
-    const partAfter = css.slice(end2);
-
-    ta.value = partBefore + secondMatch[0] + middlePart + firstMatch[0] + partAfter;
-    savedCss[currentIdx] = ta.value;
-    saveStateToStorage();
-    updatePreviewAndCheck(false);
-  }
-}
 
 function resetCurrentLevel() {
   const curVal = document.getElementById("css-editor").value;
@@ -1278,6 +1423,33 @@ function updatePreviewAndCheck(forceReload = false) {
   const css = document.getElementById("css-editor").value;
   savedCss[currentIdx] = css;
 
+  // Hiển thị khung locked-top-box nếu có code khóa ở đầu
+  const lockedTopBox = document.getElementById("locked-top-box");
+  if (lockedTopBox) {
+    if (lv.lockedTopCss) {
+      lockedTopBox.style.display = "block";
+      document.getElementById("locked-top-text").textContent = lv.lockedTopCss;
+    } else {
+      lockedTopBox.style.display = "none";
+    }
+  }
+
+  // Hiển thị khung locked-code-box nếu có code khóa ở cuối
+  const lockedBox = document.getElementById("locked-code-box");
+  if (lockedBox) {
+    if (lv.lockedBottomCss) {
+      lockedBox.style.display = "block";
+      document.getElementById("locked-code-text").textContent = lv.lockedBottomCss;
+    } else {
+      lockedBox.style.display = "none";
+    }
+  }
+
+  // Ghép CSS người dùng với CSS khóa ở đầu và cuối theo đúng thứ tự
+  const effectiveCss = (lv.lockedTopCss ? lv.lockedTopCss + "\n\n" : "") +
+    css +
+    (lv.lockedBottomCss ? "\n\n" + lv.lockedBottomCss : "");
+
   const frame = document.getElementById("preview-frame");
   
   let frameDoc = null;
@@ -1291,32 +1463,30 @@ function updatePreviewAndCheck(forceReload = false) {
   const isSameLevel = currentLevelMarker && currentLevelMarker.getAttribute("data-level") === String(lv.id);
 
   if (!forceReload && frameDoc && isSameLevel) {
-    // ĐƯỜNG TRUYỀN TỨC THÌ: Cập nhật thẳng CSS vào thẻ <style> đang chạy
     let styleTag = frameDoc.getElementById("live-css");
     if (!styleTag) {
       styleTag = frameDoc.createElement("style");
       styleTag.id = "live-css";
       frameDoc.head.appendChild(styleTag);
     }
-    styleTag.textContent = css;
-
-    // Chấm điểm ngay lập tức trên DOM đang hiển thị
+    styleTag.textContent = effectiveCss;
     runChecks(frameDoc, css);
   } else {
-    // KHỞI TẠO HOẶC ĐỔI MÀN MỚI
     const docHtml = `<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <style>
-  /* Chỉ giữ margin viền 10px để không sát mép khung. Không ép màu/font để code ở dưới kiểm soát 100% */
   body {
     margin: 10px;
     line-height: 1.45;
   }
+  em {
+    font-style: normal;
+  }
 </style>
 <style id="live-css">
-${css}
+${effectiveCss}
 </style>
 </head>
 <body>
